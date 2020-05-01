@@ -156,6 +156,7 @@ const guideline = new Line( lineGeometry, lineMaterial );
 
 function onSelectStart() {
     guidingController = this;
+    this.add(guideline);
 }
 function onSelectEnd(e) {
     console.log(e);
