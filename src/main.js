@@ -191,7 +191,7 @@ renderer.setAnimationLoop(function () {
     // virtual tele ball velocity
     const v = tempVecV;
     guidingController.getWorldDirection(v);
-    v.multiplyScalar(5);
+    v.multiplyScalar(3);
 
     // Time for ball to hit ground
     const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*g.y))/g.y;
@@ -207,5 +207,7 @@ renderer.setAnimationLoop(function () {
         guidingController.worldToLocal(to);
         to.toArray(lineGeometryVertices,i*3);
     }
+    guideline.geometry.attributes.position.needsUpdate = true;
+
     renderer.render(scene, camera);
 });
