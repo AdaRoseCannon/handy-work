@@ -60774,9 +60774,9 @@ renderer.setAnimationLoop(function () {
         // virtual tele ball velocity
         const v = tempVecV;
         guidingController.getWorldDirection(v);
-        v.multiplyScalar(10);
+        v.multiplyScalar(6);
 
-        // Time for ball to hit ground
+        // Time for tele ball to hit ground
         const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*g.y))/g.y;
 
         const from = tempVec0;
