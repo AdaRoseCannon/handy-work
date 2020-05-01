@@ -154,16 +154,18 @@ lineGeometry.setAttribute('position', new BufferAttribute(lineGeometryVertices, 
 lineGeometry.setAttribute('color', new BufferAttribute(lineGeometryColors, 3));
 const lineMaterial = new LineBasicMaterial({ vertexColors: true, blending: AdditiveBlending });
 const guideline = new Line( lineGeometry, lineMaterial );
-const guidelight = new PointLight();
-guideline.add(guidelight);
+const guidelight = new PointLight(0xffeeaa, 1, 2);
+scene.add(guidelight);
 
 function onSelectStart() {
     guidingController = this;
+    guidelight.intensity = 1;
     this.add(guideline);
 }
 function onSelectEnd() {
     if (guidingController === this) {
         guidingController = null;
+        guidelight.intensity = 0;
         this.remove(guideline);
     }
 }
@@ -199,7 +201,7 @@ renderer.setAnimationLoop(function () {
         // virtual tele ball velocity
         const v = tempVecV;
         guidingController.getWorldDirection(v);
-        v.multiplyScalar(3);
+        v.multiplyScalar(10);
 
         // Time for ball to hit ground
         const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*g.y))/g.y;
@@ -219,7 +221,6 @@ renderer.setAnimationLoop(function () {
         
         // Place the light near the end of the poing
         positionAtT(guidelight.position,t*0.99,p,v,g);
-        guidingController.worldToLocal(guidelight.position);
     }
     renderer.render(scene, camera);
 });
