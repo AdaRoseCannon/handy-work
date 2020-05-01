@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node ./",
     "build": "rollup -c;  terser --compress --mangle -o build/garden.min.js -- build/garden.js; find build -maxdepth 1 -not -type d -exec du -h {} \\;",
+    "develop": "rollup -w -c;  terser --compress --mangle -o build/garden.min.js -- build/garden.js; find build -maxdepth 1 -not -type d -exec du -h {} \\;",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -15,8 +16,10 @@
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^7.1.3",
+    "eslint": "^6.8.0",
     "rollup": "^2.7.3",
     "terser": "^4.6.12",
-    "three": "^0.115.0"
+    "three": "^0.115.0",
+    "webxr-polyfill": "^2.0.2"
   }
 }

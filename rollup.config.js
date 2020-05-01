@@ -6,5 +6,6 @@ export default {
         file: 'build/garden.js',
         format: 'esm'
     },
-    plugins: [ resolve() ]
+    plugins: [ resolve() ],
+    external: ['https://cdn.jsdelivr.net/npm/webxr-polyfill@latest/build/webxr-polyfill.js']
 };
