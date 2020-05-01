@@ -60727,21 +60727,25 @@ lineGeometry.setAttribute('position', new BufferAttribute(lineGeometryVertices, 
 lineGeometry.setAttribute('color', new BufferAttribute(lineGeometryColors, 3));
 const lineMaterial = new LineBasicMaterial({ vertexColors: true, blending: AdditiveBlending });
 const guideline = new Line( lineGeometry, lineMaterial );
+const guidelight = new PointLight();
+guideline.add(guidelight);
 
 function onSelectStart() {
     guidingController = this;
     this.add(guideline);
 }
-function onSelectEnd(e) {
-    console.log(e);
+function onSelectEnd() {
+    if (guidingController === this) {
+        guidingController = null;
+        this.remove(guideline);
+    }
 }
 
 const controller1 = renderer.xr.getController(0);
 controller1.addEventListener('selectstart', onSelectStart);
 controller1.addEventListener('selectend', onSelectEnd);
-controller1.add(guideline);
 scene.add(controller1);
-let guidingController = controller1;
+let guidingController = null;
 
 const controller2 = renderer.xr.getController(1);
 controller2.addEventListener('selectstart', onSelectStart);
@@ -60759,30 +60763,36 @@ controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGri
 scene.add( controllerGrip2 );
 
 renderer.setAnimationLoop(function () {
-    // Controller start position
-    const p = tempVecP;
-    guidingController.getWorldPosition(p);
 
-    // virtual tele ball velocity
-    const v = tempVecV;
-    guidingController.getWorldDirection(v);
-    v.multiplyScalar(3);
+    if (guidingController) {
+        // Controller start position
+        const p = tempVecP;
+        guidingController.getWorldPosition(p);
 
-    // Time for ball to hit ground
-    const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*g.y))/g.y;
+        // virtual tele ball velocity
+        const v = tempVecV;
+        guidingController.getWorldDirection(v);
+        v.multiplyScalar(3);
 
-    const from = tempVec0;
-    const to = tempVec1;
+        // Time for ball to hit ground
+        const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*g.y))/g.y;
 
-    from.set(0,0,0);
-    for (let i=1; i<=lineSegments; i++) {
+        const from = tempVec0;
+        const to = tempVec1;
 
-        // Current position of the virtual ball at time t, written to the variable 'to'
-        positionAtT(to,i*t/lineSegments,p,v,g);
-        guidingController.worldToLocal(to);
-        to.toArray(lineGeometryVertices,i*3);
+        from.set(0,0,0);
+        for (let i=1; i<=lineSegments; i++) {
+
+            // Current position of the virtual ball at time t, written to the variable 'to'
+            positionAtT(to,i*t/lineSegments,p,v,g);
+            guidingController.worldToLocal(to);
+            to.toArray(lineGeometryVertices,i*3);
+        }
+        guideline.geometry.attributes.position.needsUpdate = true;
+        
+        // Place the light near the end of the poing
+        positionAtT(guidelight.position,t*0.99,p,v,g);
+        guidingController.worldToLocal(guidelight.position);
     }
-    guideline.geometry.attributes.position.needsUpdate = true;
-
     renderer.render(scene, camera);
 });
