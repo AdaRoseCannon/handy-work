@@ -108,22 +108,19 @@ skymaterial.onBeforeCompile = function (shader) {
         return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123);
     }
     `);
-    shader.vertexShader = shader.vertexShader.replace('#include <uv_vertex>', `
-        vUv = ( uvTransform * vec3( uv, 1 ) ).xy;
-    `)
     shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
         vec4 col1;
         vec4 col2;
-        vec4 random4 = vec4(random(vUv) * (1.0 / 255.0));
         float mixAmount;
         if (vUv.y > 0.5) {
             col1 = vec4( 249, 229, 180, 1 ) / 255.0;
             col2 = vec4( 0, 57, 115, 1 ) / 255.0;
             float newY = (vUv.y - 0.5) * 2.0;
-            mixAmount = sqrt(newY)*2.0 + random(vUv*1.1)*0.01;
+            mixAmount = sqrt(newY)*2.0;
         } else {
             col1 = vec4(0.6,0.6,0.6,1.0);
         }
+        vec4 random4 = vec4(random(vUv) * (1.0 / 255.0));
         diffuseColor *= mix(col1, col2, mixAmount) + random4;
     `);
 };
