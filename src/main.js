@@ -12,7 +12,7 @@ import {
     MeshBasicMaterial,
     Vector3,
     PCFSoftShadowMap,
-    MeshStandardMaterial,
+    MeshLambertMaterial,
     PointLight,
     PlaneGeometry,
     TextureLoader,
@@ -29,7 +29,7 @@ import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerM
 import WebXRPolyfill from 'webxr-polyfill';
 
 const canvas = document.querySelector('canvas');
-const renderer = new WebGLRenderer({ canvas: canvas });
+const renderer = new WebGLRenderer({ canvas: canvas, antialias: true });
 renderer.xr.enabled = true;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = PCFSoftShadowMap;
@@ -62,8 +62,8 @@ const light = new DirectionalLight(0xffaa33);
 light.position.set(-10, 10, 10);
 light.intensity = 1.0;
 light.castShadow = true;
-light.shadow.mapSize.width = 1024;
-light.shadow.mapSize.height = 1024;
+light.shadow.mapSize.width = 512;
+light.shadow.mapSize.height = 512;
 light.shadow.camera.near = 1;
 light.shadow.camera.far = 30;
 scene.add(light);
@@ -83,14 +83,14 @@ const floorTexture = new TextureLoader().load('https://cdn.glitch.com/3423c223-e
 floorTexture.repeat.multiplyScalar(8);
 floorTexture.wrapS = floorTexture.wrapT = RepeatWrapping;
 const floor = new Mesh(
-    new PlaneGeometry(50, 50, 5, 5),
-    new MeshStandardMaterial({
+    new PlaneGeometry(50, 50, 50, 50),
+    new MeshLambertMaterial({
         map: floorTexture,
         roughness: 0.9
     })
 );
 floor.rotation.x = -Math.PI / 2;
-floor.receiveShadow = true;
+floor.receiveShadow = false;
 floor.name = 'floor';
 scene.add(floor);
 
@@ -120,7 +120,7 @@ skymaterial.onBeforeCompile = function (shader) {
         } else {
             col1 = vec4(0.6,0.6,0.6,1.0);
         }
-        vec4 random4 = vec4(random(vUv) * (1.0 / 255.0));
+        vec4 random4 = vec4((random(vUv)-0.5) * (1.0 / 255.0));
         diffuseColor *= mix(col1, col2, mixAmount) + random4;
     `);
 };
@@ -160,19 +160,31 @@ lineGeometry.setAttribute('position', new BufferAttribute(lineGeometryVertices, 
 lineGeometry.setAttribute('color', new BufferAttribute(lineGeometryColors, 3));
 const lineMaterial = new LineBasicMaterial({ vertexColors: true, blending: AdditiveBlending });
 const guideline = new Line( lineGeometry, lineMaterial );
-const guidelight = new PointLight(0xffeeaa, 1, 2);
-scene.add(guidelight);
+const guidelight = new PointLight(0xffeeaa, 0, 2);
+const guidespriteTexture = new TextureLoader().load('./images/target.png');
+const guidesprite = new Mesh(
+    new PlaneGeometry(0.3, 0.3, 1, 1),
+    new MeshBasicMaterial({
+        map: guidespriteTexture,
+        roughness: 0.9,
+        blending: AdditiveBlending,
+        color: 0x555555
+    })
+);
+guidesprite.rotation.x = -Math.PI/2;
 
 function onSelectStart() {
     guidingController = this;
     guidelight.intensity = 1;
     this.add(guideline);
+    scene.add(guidesprite);
 }
 function onSelectEnd() {
     if (guidingController === this) {
         guidingController = null;
         guidelight.intensity = 0;
         this.remove(guideline);
+        scene.remove(guidesprite);
     }
 }
 
@@ -227,6 +239,7 @@ renderer.setAnimationLoop(function () {
         
         // Place the light near the end of the poing
         positionAtT(guidelight.position,t*0.99,p,v,g);
+        positionAtT(guidesprite.position,t*0.99,p,v,g);
     }
     renderer.render(scene, camera);
 });
