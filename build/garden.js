@@ -60670,25 +60670,34 @@ scene.add(floor);
 const skygeometry = new SphereGeometry(25, 50, 50, 0, 2 * Math.PI);
 const skymaterial = new MeshBasicMaterial();
 skymaterial.side = BackSide;
+
+// Nice sky with a bit of dithering to reduce banding.
 skymaterial.onBeforeCompile = function (shader) {
     shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\n#define USE_UV');
-    shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\n#define USE_UV');
+    shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `
+    #include <common>
+    #define USE_UV
+    float random (vec2 st) {
+        return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123);
+    }
+    `);
     shader.vertexShader = shader.vertexShader.replace('#include <uv_vertex>', `
         vUv = ( uvTransform * vec3( uv, 1 ) ).xy;
     `);
     shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
         vec4 col1;
         vec4 col2;
+        vec4 random4 = vec4(random(vUv) * (1.0 / 255.0));
         float mixAmount;
         if (vUv.y > 0.5) {
             col1 = vec4( 249, 229, 180, 1 ) / 255.0;
             col2 = vec4( 0, 57, 115, 1 ) / 255.0;
             float newY = (vUv.y - 0.5) * 2.0;
-            mixAmount = sqrt(newY)*2.0;
+            mixAmount = sqrt(newY)*2.0 + random(vUv*1.1)*0.01;
         } else {
             col1 = vec4(0.6,0.6,0.6,1.0);
         }
-        diffuseColor *= mix(col1, col2, mixAmount);
+        diffuseColor *= mix(col1, col2, mixAmount) + random4;
     `);
 };
 const skysphere = new Mesh(skygeometry, skymaterial);
@@ -60797,3 +60806,5 @@ renderer.setAnimationLoop(function () {
     }
     renderer.render(scene, camera);
 });
+
+window.renderer = renderer;
