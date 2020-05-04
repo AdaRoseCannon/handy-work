@@ -1,247 +1,33 @@
-/* eslint-disable no-case-declarations */
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import {
-    WebGLRenderer,
-    Scene,
-    PerspectiveCamera,
-    AmbientLight,
-    DirectionalLight,
-    SphereGeometry,
-    BackSide,
+    renderer,
+    scene,
+    camera
+} from './lib/scene.js';
+
+import './lib/controllers';
+
+import {
     Mesh,
     MeshBasicMaterial,
-    Vector3,
-    PCFSoftShadowMap,
-    MeshLambertMaterial,
-    PointLight,
     PlaneGeometry,
     TextureLoader,
-    Group,
-    RepeatWrapping,
-    BufferGeometry,
-    BufferAttribute,
-    LineBasicMaterial,
-    AdditiveBlending,
-    Line
+    AdditiveBlending
 } from 'three';
-import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
-import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js'; 
-import WebXRPolyfill from 'webxr-polyfill';
 
-const canvas = document.querySelector('canvas');
-const renderer = new WebGLRenderer({ canvas: canvas, antialias: true });
-renderer.xr.enabled = true;
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = PCFSoftShadowMap;
-renderer.setPixelRatio(window.devicePixelRatio);
-
-const scene = new Scene();
-scene.name = "xrgarden"
-window.scene = scene;
-const camera = new PerspectiveCamera();
-camera.far = 40;
-scene.add(camera);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.maxPolarAngle = Math.PI * 0.5;
-controls.target = new Vector3(0, 1, -5);
-camera.position.set(0, 1.6, 0);
-controls.update();
-
-function onWindowResize() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
-}
-window.addEventListener('resize', onWindowResize, false);
-onWindowResize();
-
-const light = new DirectionalLight(0xffaa33);
-light.position.set(-10, 10, 10);
-light.intensity = 1.0;
-light.castShadow = true;
-light.shadow.mapSize.width = 512;
-light.shadow.mapSize.height = 512;
-light.shadow.camera.near = 1;
-light.shadow.camera.far = 30;
-scene.add(light);
-
-// Add the sun
-light.add(
-    new Mesh(new SphereGeometry(1, 32, 32), new MeshBasicMaterial({
-        color: 0xffaa33
-    }))
-)
-
-const light2 = new AmbientLight(0x003973);
-light2.intensity = 1.0;
-scene.add(light2);
-
-const floorTexture = new TextureLoader().load('https://cdn.glitch.com/3423c223-e1e5-450d-8cfa-2f5215104916%2Fmemphis-mini.png?v=1579618577700');
-floorTexture.repeat.multiplyScalar(8);
-floorTexture.wrapS = floorTexture.wrapT = RepeatWrapping;
-const floor = new Mesh(
-    new PlaneGeometry(50, 50, 50, 50),
-    new MeshLambertMaterial({
-        map: floorTexture,
-        roughness: 0.9
-    })
-);
-floor.rotation.x = -Math.PI / 2;
-floor.receiveShadow = false;
-floor.name = 'floor';
-scene.add(floor);
-
-const skygeometry = new SphereGeometry(25, 50, 50, 0, 2 * Math.PI);
-const skymaterial = new MeshBasicMaterial();
-skymaterial.side = BackSide;
-
-// Nice sky with a bit of dithering to reduce banding.
-skymaterial.onBeforeCompile = function (shader) {
-    shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\n#define USE_UV');
-    shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `
-    #include <common>
-    #define USE_UV
-    float random (vec2 st) {
-        return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123);
-    }
-    `);
-    shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
-        vec4 col1;
-        vec4 col2;
-        float mixAmount;
-        if (vUv.y > 0.5) {
-            col1 = vec4( 249, 229, 180, 1 ) / 255.0;
-            col2 = vec4( 0, 57, 115, 1 ) / 255.0;
-            float newY = (vUv.y - 0.5) * 2.0;
-            mixAmount = sqrt(newY)*2.0;
-        } else {
-            col1 = vec4(0.6,0.6,0.6,1.0);
-        }
-        vec4 random4 = vec4((random(vUv)-0.5) * (1.0 / 255.0));
-        diffuseColor *= mix(col1, col2, mixAmount) + random4;
-    `);
-};
-const skysphere = new Mesh(skygeometry, skymaterial);
-skysphere.name = 'skysphere';
-scene.add(skysphere);
-
-const stage = new Group();
-scene.add(stage);
-stage.position.set(0, 0, -5);
-stage.rotation.set(0, -Math.PI / 2, 0);
-
-new WebXRPolyfill();
-document.body.appendChild( VRButton.createButton( renderer ) );
-
-
-function positionAtT(inVec,t,p,v,g) {
-    inVec.copy(p);
-    inVec.addScaledVector(v,t);
-    inVec.addScaledVector(g,0.5*t**2);
-    return inVec;
-}
-
-const g = new Vector3(0,-9.8,0);
-const tempVec0 = new Vector3();
-const tempVec1 = new Vector3();
-const tempVecP = new Vector3();
-const tempVecV = new Vector3();
-
-const lineSegments=10;
-const lineGeometry = new BufferGeometry();
-const lineGeometryVertices = new Float32Array((lineSegments +1) * 3);
-lineGeometryVertices.fill(0);
-const lineGeometryColors = new Float32Array((lineSegments +1) * 3);
-lineGeometryColors.fill(0.5);
-lineGeometry.setAttribute('position', new BufferAttribute(lineGeometryVertices, 3));
-lineGeometry.setAttribute('color', new BufferAttribute(lineGeometryColors, 3));
-const lineMaterial = new LineBasicMaterial({ vertexColors: true, blending: AdditiveBlending });
-const guideline = new Line( lineGeometry, lineMaterial );
-const guidelight = new PointLight(0xffeeaa, 0, 2);
-const guidespriteTexture = new TextureLoader().load('./images/target.png');
-const guidesprite = new Mesh(
-    new PlaneGeometry(0.3, 0.3, 1, 1),
+const targetTexture = new TextureLoader().load('./images/target.png');
+const target = new Mesh(
+    new PlaneGeometry(0.5, 0.5, 1, 1),
     new MeshBasicMaterial({
-        map: guidespriteTexture,
-        roughness: 0.9,
+        map: targetTexture,
         blending: AdditiveBlending,
-        color: 0x555555
+        color: 0xff0000,
+        transparent: true
     })
 );
-guidesprite.rotation.x = -Math.PI/2;
-
-function onSelectStart() {
-    guidingController = this;
-    guidelight.intensity = 1;
-    this.add(guideline);
-    scene.add(guidesprite);
-}
-function onSelectEnd() {
-    if (guidingController === this) {
-        guidingController = null;
-        guidelight.intensity = 0;
-        this.remove(guideline);
-        scene.remove(guidesprite);
-    }
-}
-
-const controller1 = renderer.xr.getController(0);
-controller1.addEventListener('selectstart', onSelectStart);
-controller1.addEventListener('selectend', onSelectEnd);
-scene.add(controller1);
-let guidingController = null;
-
-const controller2 = renderer.xr.getController(1);
-controller2.addEventListener('selectstart', onSelectStart);
-controller2.addEventListener('selectend', onSelectEnd);
-scene.add(controller2);
-
-const controllerModelFactory = new XRControllerModelFactory();
-
-const controllerGrip1 = renderer.xr.getControllerGrip(0);
-controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
-scene.add( controllerGrip1 );
-
-const controllerGrip2 = renderer.xr.getControllerGrip( 1 );
-controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGrip2 ) );
-scene.add( controllerGrip2 );
-
-renderer.setAnimationLoop(function () {
-
-    if (guidingController) {
-        // Controller start position
-        const p = tempVecP;
-        guidingController.getWorldPosition(p);
-
-        // virtual tele ball velocity
-        const v = tempVecV;
-        guidingController.getWorldDirection(v);
-        v.multiplyScalar(6);
-
-        // Time for tele ball to hit ground
-        const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*g.y))/g.y;
-
-        const from = tempVec0;
-        const to = tempVec1;
-
-        from.set(0,0,0);
-        for (let i=1; i<=lineSegments; i++) {
-
-            // Current position of the virtual ball at time t, written to the variable 'to'
-            positionAtT(to,i*t/lineSegments,p,v,g);
-            guidingController.worldToLocal(to);
-            to.toArray(lineGeometryVertices,i*3);
-        }
-        guideline.geometry.attributes.position.needsUpdate = true;
-        
-        // Place the light near the end of the poing
-        positionAtT(guidelight.position,t*0.99,p,v,g);
-        positionAtT(guidesprite.position,t*0.99,p,v,g);
-    }
-    renderer.render(scene, camera);
-});
+target.position.z = -5;
+target.position.y = 0.1;
+target.rotation.x = -Math.PI/2;
+scene.add(target);
 
 window.renderer = renderer;
+window.camera = camera;
