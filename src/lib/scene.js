@@ -20,6 +20,7 @@ import {
 } from 'three';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 import WebXRPolyfill from 'webxr-polyfill';
+import TWEEN from '@tweenjs/tween.js/dist/tween.esm.js';
 
 const cameraGroup = new Group();
 
@@ -128,6 +129,7 @@ document.body.appendChild( VRButton.createButton( renderer ) );
 
 const rafCallbacks = new Set();
 renderer.setAnimationLoop(function (time) {
+    TWEEN.update(time);
     rafCallbacks.forEach(cb => cb(time));
     renderer.render(scene, camera);
 });

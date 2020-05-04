@@ -118,9 +118,19 @@ function onSelectEnd() {
         newPos.add(cursorPos);
 
         blinkerSphere.visible = true;
+        blinkerSphere.scale.set(2.5,2.5,2.5);
+        new TWEEN.Tween(blinkerSphere.scale)
+            .to({x:1,y:1,z:1}, 400)
+            .easing(TWEEN.Easing.Quadratic.Out)
+            .start();
         new TWEEN.Tween(cameraGroup.position)
-            .to(newPos, 300)
-            .onComplete(() => blinkerSphere.visible = false)
+            .delay(400)
+            .to(newPos, 600)
+            .chain(
+                new TWEEN.Tween(blinkerSphere.scale)
+                    .to({x:2.5,y:2.5,z:2.5}, 100)
+                    .onComplete(() => blinkerSphere.visible = false)
+            )
             .start();
 
         // clean up
@@ -130,9 +140,6 @@ function onSelectEnd() {
         scene.remove(guidesprite);
     }
 }
-
-rafCallbacks.add(t => TWEEN.update(t));
-
 rafCallbacks.add(() => {
     if (guidingController) {
         // Controller start position
@@ -166,9 +173,16 @@ rafCallbacks.add(() => {
     }
 });
 
+rafCallbacks.add(() => {
+    const session = renderer.xr.getSession();
+    if (session) for (const source of session.inputSources) {
+        // console.log(source.gamepad.axes);
+    }
+});
 
 
-// simple grid environment
+
+// simple grid environment makes motion more comfortable
 const gridTexture = new TextureLoader().load('./images/grid.png');
 gridTexture.repeat.multiplyScalar(50);
 gridTexture.wrapS = gridTexture.wrapT = RepeatWrapping;
@@ -197,6 +211,7 @@ sky2sphere.name = 'sky2sphere';
 cameraGroup.add(sky2sphere);
 
 const blinkerSphereGeometry = new SphereBufferGeometry(0.3, 64, 8, 0, Math.PI*2, 0, Math.PI * 0.85);
+blinkerSphereGeometry.translate(0,0.3,0);
 const blinkerSphereMaterial = new MeshBasicMaterial({
     side: BackSide,
     colorWrite: false
@@ -204,12 +219,14 @@ const blinkerSphereMaterial = new MeshBasicMaterial({
 
 const blinkerSphere = new Mesh( blinkerSphereGeometry, blinkerSphereMaterial );
 blinkerSphere.rotation.set(Math.PI/2, 0, 0);
+blinkerSphere.position.set(0, 0, -0.3);
 blinkerSphere.visible = false;
 camera.add(blinkerSphere);
 
 floor2.renderOrder = -1;
 sky2sphere.renderOrder = -2;
 
+window.blinkerSphere = blinkerSphere;
 
 export {
     controllerGrip1,
