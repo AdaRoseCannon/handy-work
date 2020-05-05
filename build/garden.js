@@ -61757,7 +61757,7 @@ model2.setEnvironmentMap(envMap);
 const canvas$1 = document.createElement('canvas');
 const canvasTexture = new CanvasTexture(canvas$1);
 canvas$1.width = 1024;
-canvas$1.height = 1024;
+canvas$1.height = 128;
 const ctx = canvas$1.getContext('2d');
 function writeText(text) {
     if (typeof text !== 'string') text = JSON.stringify(text,null,2);
@@ -61769,10 +61769,10 @@ function writeText(text) {
     canvasTexture.needsUpdate = true;
 }
 writeText('hello\nworld');
-const geometry = new PlaneGeometry( 0.3, 0.3 );
+const geometry = new PlaneGeometry( 0.3, 0.0375 );
 const material = new MeshBasicMaterial( {map: canvasTexture, color: 0xffeeff} );
 const consolePlane = new Mesh( geometry, material );
-consolePlane.position.set(0, 0.15, -0.15);
+consolePlane.position.set(0, 0.01875, -0.1);
 consolePlane.rotation.set(-Math.PI/4,0,0);
 controller1.add( consolePlane );
 
