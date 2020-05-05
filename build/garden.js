@@ -50615,7 +50615,7 @@ const _global = typeof global !== 'undefined' ? global :
                 typeof window !== 'undefined' ? window : {};
 
 const PRIVATE = Symbol('@@webxr-polyfill/EventTarget');
-class EventTarget {
+class EventTarget$1 {
   constructor() {
     this[PRIVATE] = {
       listeners: new Map(),
@@ -51598,7 +51598,7 @@ const POLYFILL_REQUEST_SESSION_ERROR =
 or navigator.xr.requestSession('inline') prior to requesting an immersive
 session. This is a limitation specific to the WebXR Polyfill and does not apply
 to native implementations of the API.`;
-class XR extends EventTarget {
+class XR extends EventTarget$1 {
   constructor(devicePromise) {
     super();
     this[PRIVATE$4] = {
@@ -51934,7 +51934,7 @@ class XRViewSpace extends XRSpace {
     this._inverseBaseMatrix = device.getBaseViewMatrix(this._specialType);
   }
 }
-class XRSession$1 extends EventTarget {
+class XRSession$1 extends EventTarget$1 {
   constructor(device, mode, id) {
     super();
     let immersive = mode != 'inline';
@@ -55483,7 +55483,7 @@ return CardboardVRDisplay;
 });
 var CardboardVRDisplay = unwrapExports(cardboardVrDisplay);
 
-class XRDevice extends EventTarget {
+class XRDevice extends EventTarget$1 {
   constructor(global) {
     super();
     this.global = global;
@@ -57700,6 +57700,18 @@ renderer.setAnimationLoop(function (time) {
     rafCallbacks.forEach(cb => cb(time));
     renderer.render(scene, camera);
 });
+
+
+const cubeCamera = new CubeCamera( 1, 100000, 128 );
+const envMap = cubeCamera.renderTarget.texture;
+scene.add( cubeCamera );
+cubeCamera.update( renderer, scene );
+function envMapUpdate (position) {
+    if (position) cubeCamera.position.copy(position);
+    cubeCamera.update( renderer, scene );
+}
+
+setTimeout(() => envMapUpdate(camera.getWorldPosition()), 3000);
 
 /**
  * @author Rich Tibbett / https://github.com/richtr
@@ -61731,12 +61743,38 @@ cameraGroup.add(controller2);
 const controllerModelFactory = new XRControllerModelFactory();
 
 const controllerGrip1 = renderer.xr.getControllerGrip(0);
-controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
+const model1 = controllerModelFactory.createControllerModel( controllerGrip1 );
+controllerGrip1.add( model1 );
 cameraGroup.add( controllerGrip1 );
+model1.setEnvironmentMap(envMap);
 
 const controllerGrip2 = renderer.xr.getControllerGrip( 1 );
-controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGrip2 ) );
+const model2 = controllerModelFactory.createControllerModel( controllerGrip2 );
+controllerGrip2.add( model2 );
 cameraGroup.add( controllerGrip2 );
+model2.setEnvironmentMap(envMap);
+
+const canvas$1 = document.createElement('canvas');
+const canvasTexture = new CanvasTexture(canvas$1);
+canvas$1.width = 1024;
+canvas$1.height = 1024;
+const ctx = canvas$1.getContext('2d');
+function writeText(text) {
+    if (typeof text !== 'string') text = JSON.stringify(text,null,2);
+    ctx.font = "120px Comic Sans MS";
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, 1024, 1024);
+    ctx.fillStyle = 'black';
+    text.split('\n').forEach((str, i) => ctx.fillText(str, 0, (i+1)*120));
+    canvasTexture.needsUpdate = true;
+}
+writeText('hello\nworld');
+const geometry = new PlaneGeometry( 0.3, 0.3 );
+const material = new MeshBasicMaterial( {map: canvasTexture, color: 0xffeeff} );
+const consolePlane = new Mesh( geometry, material );
+consolePlane.position.set(0, 0.15, -0.15);
+consolePlane.rotation.set(-Math.PI/4,0,0);
+controller1.add( consolePlane );
 
 function onSelectStart() {
     guidingController = this;
@@ -61766,9 +61804,11 @@ function onSelectEnd() {
         positionAtT(cursorPos,t,p,v,g);
 
         cursorPos.addScaledVector(feetPos ,-1);
+        const offset = cursorPos;
         const newPos = new Vector3();
         newPos.copy(cameraGroup.position);
-        newPos.add(cursorPos);
+        newPos.add(offset);
+        const dist = offset.length();
 
         blinkerSphere.visible = true;
         blinkerSphere.scale.set(2.5,2.5,2.5);
@@ -61778,7 +61818,7 @@ function onSelectEnd() {
             .start();
         new TWEEN.Tween(cameraGroup.position)
             .delay(400)
-            .to(newPos, 600)
+            .to(newPos, dist*120)
             .chain(
                 new TWEEN.Tween(blinkerSphere.scale)
                     .to({x:2.5,y:2.5,z:2.5}, 100)
@@ -61826,13 +61866,83 @@ rafCallbacks.add(() => {
     }
 });
 
+const prevGamePads = new Map();
+const gamepad = new EventTarget();
 rafCallbacks.add(() => {
     const session = renderer.xr.getSession();
+    let i = 0;
     if (session) for (const source of session.inputSources) {
-        // console.log(source.gamepad.axes);
+        const controller = renderer.xr.getController(i++);
+        const old = prevGamePads.get(source);
+        const data = {
+            buttons: source.gamepad.buttons.map(b => b.value),
+            axes: source.gamepad.axes.slice(0)
+        };
+        if (old) {
+            data.buttons.forEach((value,i)=>{
+                if (value !== old.buttons[i]) {
+                    if (value === 1) {
+                        const event = new CustomEvent(`button${i}Down`, {detail: {value, source, controller,data}});
+                        writeText(event.type);
+                        gamepad.dispatchEvent(event);
+                    } else {
+                        const event = new CustomEvent(`button${i}Up`, {detail: {value, source, controller,data}});
+                        gamepad.dispatchEvent(event);
+                        writeText(event.type);
+                    }
+                }
+            });
+            data.axes.forEach((value,i)=>{
+                if (value !== old.axes[i]) {
+                    const event = new CustomEvent(`axes${i}Move`, {detail: {value, source, controller,data}});
+                    gamepad.dispatchEvent(event);
+                    if (old.axes[i] === 0) {
+                        const event = new CustomEvent(`axes${i}MoveStart`, {detail: {value, source, controller,data}});
+                        writeText(event.type);
+                        gamepad.dispatchEvent(event);
+                    }
+                    if (Math.abs(old.axes[i]) < 0.5 && Math.abs(value) > 0.5) {
+                        const event = new CustomEvent(`axes${i}MoveMiddle`, {detail: {value, source, controller,data}});
+                        writeText(event.type);
+                        gamepad.dispatchEvent(event);
+                    }
+                    if (value === 0) {
+                        const event = new CustomEvent(`axes${i}MoveEnd`, {detail: {value, source, controller,data}});
+                        writeText(event.type);
+                        gamepad.dispatchEvent(event);
+                    }
+                }
+            });
+        }
+        prevGamePads.set(source, data);
     }
 });
 
+function handleMove({detail}) {
+    // Turn left
+    if (detail.value > 0) {
+        cameraGroup.rotation.y -= Math.PI/4;
+    }
+    // Turn right
+    if (detail.value < 0) {
+        cameraGroup.rotation.y += Math.PI/4;
+    }
+}
+gamepad.addEventListener('axes0MoveMiddle', handleMove, true);
+gamepad.addEventListener('axes2MoveMiddle', handleMove, true);
+
+function handleUp({detail}) {
+    if (detail.value < 0) {
+        onSelectStart.bind(detail.controller)();
+    }
+}
+function handleUpEnd({detail}) {
+    onSelectEnd.bind(detail.controller)();
+}
+gamepad.addEventListener('axes1MoveMiddle', handleUp, true);
+gamepad.addEventListener('axes3MoveMiddle', handleUp, true);
+gamepad.addEventListener('axes1MoveEnd', handleUpEnd, true);
+gamepad.addEventListener('axes3MoveEnd', handleUpEnd, true);
 
 
 // simple grid environment makes motion more comfortable

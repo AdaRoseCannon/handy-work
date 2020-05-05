@@ -16,7 +16,8 @@ import {
     PlaneGeometry,
     TextureLoader,
     Group,
-    RepeatWrapping
+    RepeatWrapping,
+    CubeCamera
 } from 'three';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 import WebXRPolyfill from 'webxr-polyfill';
@@ -134,10 +135,24 @@ renderer.setAnimationLoop(function (time) {
     renderer.render(scene, camera);
 });
 
+
+const cubeCamera = new CubeCamera( 1, 100000, 128 );
+const envMap = cubeCamera.renderTarget.texture;
+scene.add( cubeCamera );
+cubeCamera.update( renderer, scene );
+function envMapUpdate (position) {
+    if (position) cubeCamera.position.copy(position);
+    cubeCamera.update( renderer, scene );
+}
+
+setTimeout(() => envMapUpdate(camera.getWorldPosition()), 3000);
+
 export {
     renderer,
     scene,
     rafCallbacks,
     cameraGroup,
-    camera
+    camera,
+    envMap,
+    envMapUpdate
 }
