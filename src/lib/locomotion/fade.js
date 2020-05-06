@@ -5,16 +5,12 @@ import {
     Mesh,
     MeshBasicMaterial,
     SphereBufferGeometry,
-    BackSide,
-    Vector3
+    BackSide
 } from 'three';
 
 import TWEEN from '@tweenjs/tween.js/dist/tween.esm.js';
 
 function locomotion(offset) {
-    const newPos = new Vector3();
-    newPos.copy(cameraGroup.position);
-    newPos.add(offset);
 
     blinkerSphere.visible = true;
     blinkerSphere.material.opacity = 0;
@@ -22,7 +18,11 @@ function locomotion(offset) {
         .to({opacity: 1}, 200)
         .easing(TWEEN.Easing.Quadratic.Out)
         .onComplete(function () {
-            cameraGroup.position.copy(newPos);
+
+            // Do the teleport
+            cameraGroup.position.add(offset);
+
+            // Fade back
             new TWEEN.Tween(blinkerSphere.material)
             .to({opacity: 0}, 200)
             .onComplete(() => blinkerSphere.visible = false)

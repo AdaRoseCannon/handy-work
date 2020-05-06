@@ -19,7 +19,7 @@ import {
 
 import {
     locomotion
-} from './locomotion/fade.js';
+} from './locomotion/slide.js';
 
 function positionAtT(inVec,t,p,v,g) {
     inVec.copy(p);
@@ -134,8 +134,8 @@ function onSelectEnd() {
         const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*g.y))/g.y;
         positionAtT(cursorPos,t,p,v,g);
 
-        cursorPos.addScaledVector(feetPos ,-1);
         const offset = cursorPos;
+        offset.addScaledVector(feetPos ,-1);
 
         // Do the locomotion
         locomotion(offset);

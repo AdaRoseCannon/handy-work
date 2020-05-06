@@ -39,7 +39,7 @@ function locomotion(offset) {
         .start();
 }
 
-// simple grid environment, locked tot he user's space, makes motion more comfortable
+// simple grid environment, locked to the user's space, makes motion more comfortable
 const gridTexture = new TextureLoader().load('./images/grid.png');
 gridTexture.repeat.multiplyScalar(50);
 gridTexture.wrapS = gridTexture.wrapT = RepeatWrapping;
