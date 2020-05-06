@@ -11,13 +11,11 @@ import {
     Mesh,
     MeshBasicMaterial,
     Vector3,
-    PCFSoftShadowMap,
     MeshLambertMaterial,
     PlaneGeometry,
     TextureLoader,
     Group,
-    RepeatWrapping,
-    CubeCamera
+    RepeatWrapping
 } from 'three';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 import WebXRPolyfill from 'webxr-polyfill';
@@ -28,8 +26,6 @@ const cameraGroup = new Group();
 const canvas = document.querySelector('canvas');
 const renderer = new WebGLRenderer({ canvas: canvas, antialias: true });
 renderer.xr.enabled = true;
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = PCFSoftShadowMap;
 renderer.setPixelRatio(window.devicePixelRatio);
 
 const scene = new Scene();
@@ -59,11 +55,6 @@ onWindowResize();
 const light = new DirectionalLight(0xffaa33);
 light.position.set(-10, 10, 10);
 light.intensity = 1.0;
-light.castShadow = true;
-light.shadow.mapSize.width = 512;
-light.shadow.mapSize.height = 512;
-light.shadow.camera.near = 1;
-light.shadow.camera.far = 30;
 scene.add(light);
 
 // Add the sun
@@ -121,7 +112,6 @@ const floor = new Mesh(
     })
 );
 floor.rotation.x = -Math.PI / 2;
-floor.receiveShadow = true;
 floor.name = 'floor';
 scene.add(floor);
 
@@ -135,24 +125,10 @@ renderer.setAnimationLoop(function (time) {
     renderer.render(scene, camera);
 });
 
-
-const cubeCamera = new CubeCamera( 1, 100000, 128 );
-const envMap = cubeCamera.renderTarget.texture;
-scene.add( cubeCamera );
-cubeCamera.update( renderer, scene );
-function envMapUpdate (position) {
-    if (position) cubeCamera.position.copy(position);
-    cubeCamera.update( renderer, scene );
-}
-
-setTimeout(() => envMapUpdate(camera.getWorldPosition()), 3000);
-
 export {
     renderer,
     scene,
     rafCallbacks,
     cameraGroup,
-    camera,
-    envMap,
-    envMapUpdate
+    camera
 }

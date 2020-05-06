@@ -57594,8 +57594,6 @@ const cameraGroup = new Group();
 const canvas = document.querySelector('canvas');
 const renderer = new WebGLRenderer({ canvas: canvas, antialias: true });
 renderer.xr.enabled = true;
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = PCFSoftShadowMap;
 renderer.setPixelRatio(window.devicePixelRatio);
 
 const scene = new Scene();
@@ -57625,11 +57623,6 @@ onWindowResize();
 const light = new DirectionalLight(0xffaa33);
 light.position.set(-10, 10, 10);
 light.intensity = 1.0;
-light.castShadow = true;
-light.shadow.mapSize.width = 512;
-light.shadow.mapSize.height = 512;
-light.shadow.camera.near = 1;
-light.shadow.camera.far = 30;
 scene.add(light);
 
 // Add the sun
@@ -57687,7 +57680,6 @@ const floor = new Mesh(
     })
 );
 floor.rotation.x = -Math.PI / 2;
-floor.receiveShadow = true;
 floor.name = 'floor';
 scene.add(floor);
 
@@ -57700,18 +57692,6 @@ renderer.setAnimationLoop(function (time) {
     rafCallbacks.forEach(cb => cb(time));
     renderer.render(scene, camera);
 });
-
-
-const cubeCamera = new CubeCamera( 1, 100000, 128 );
-const envMap = cubeCamera.renderTarget.texture;
-scene.add( cubeCamera );
-cubeCamera.update( renderer, scene );
-function envMapUpdate (position) {
-    if (position) cubeCamera.position.copy(position);
-    cubeCamera.update( renderer, scene );
-}
-
-setTimeout(() => envMapUpdate(camera.getWorldPosition()), 3000);
 
 /**
  * @author Rich Tibbett / https://github.com/richtr
@@ -61688,6 +61668,40 @@ var XRControllerModelFactory = ( function () {
 
 } )();
 
+function locomotion(offset) {
+    const newPos = new Vector3();
+    newPos.copy(cameraGroup.position);
+    newPos.add(offset);
+
+    blinkerSphere.visible = true;
+    blinkerSphere.material.opacity = 0;
+    new TWEEN.Tween(blinkerSphere.material)
+        .to({opacity: 1}, 200)
+        .easing(TWEEN.Easing.Quadratic.Out)
+        .onComplete(function () {
+            cameraGroup.position.copy(newPos);
+            new TWEEN.Tween(blinkerSphere.material)
+            .to({opacity: 0}, 200)
+            .onComplete(() => blinkerSphere.visible = false)
+            .start();
+        })
+        .start();
+}
+
+const blinkerSphereGeometry = new SphereBufferGeometry(0.3, 16, 16);
+blinkerSphereGeometry.translate(0,0.3,0);
+const blinkerSphereMaterial = new MeshBasicMaterial({
+    side: BackSide,
+    color: 0x000000,
+    transparent: true
+});
+const blinkerSphere = new Mesh( blinkerSphereGeometry, blinkerSphereMaterial );
+blinkerSphere.rotation.set(Math.PI/2, 0, 0);
+blinkerSphere.position.set(0, 0, -0.3);
+blinkerSphere.visible = false;
+camera.add(blinkerSphere);
+blinkerSphereMaterial.renderOrder = -101;
+
 function positionAtT(inVec,t,p,v,g) {
     inVec.copy(p);
     inVec.addScaledVector(v,t);
@@ -61746,13 +61760,11 @@ const controllerGrip1 = renderer.xr.getControllerGrip(0);
 const model1 = controllerModelFactory.createControllerModel( controllerGrip1 );
 controllerGrip1.add( model1 );
 cameraGroup.add( controllerGrip1 );
-model1.setEnvironmentMap(envMap);
 
 const controllerGrip2 = renderer.xr.getControllerGrip( 1 );
 const model2 = controllerModelFactory.createControllerModel( controllerGrip2 );
 controllerGrip2.add( model2 );
 cameraGroup.add( controllerGrip2 );
-model2.setEnvironmentMap(envMap);
 
 const canvas$1 = document.createElement('canvas');
 const canvasTexture = new CanvasTexture(canvas$1);
@@ -61768,7 +61780,7 @@ function writeText(text) {
     text.split('\n').forEach((str, i) => ctx.fillText(str, 0, (i+1)*120));
     canvasTexture.needsUpdate = true;
 }
-writeText('hello\nworld');
+
 const geometry = new PlaneGeometry( 0.3, 0.0375 );
 const material = new MeshBasicMaterial( {map: canvasTexture, color: 0xffeeff} );
 const consolePlane = new Mesh( geometry, material );
@@ -61805,26 +61817,9 @@ function onSelectEnd() {
 
         cursorPos.addScaledVector(feetPos ,-1);
         const offset = cursorPos;
-        const newPos = new Vector3();
-        newPos.copy(cameraGroup.position);
-        newPos.add(offset);
-        const dist = offset.length();
 
-        blinkerSphere.visible = true;
-        blinkerSphere.scale.set(2.5,2.5,2.5);
-        new TWEEN.Tween(blinkerSphere.scale)
-            .to({x:1,y:1,z:1}, 400)
-            .easing(TWEEN.Easing.Quadratic.Out)
-            .start();
-        new TWEEN.Tween(cameraGroup.position)
-            .delay(400)
-            .to(newPos, dist*120)
-            .chain(
-                new TWEEN.Tween(blinkerSphere.scale)
-                    .to({x:2.5,y:2.5,z:2.5}, 100)
-                    .onComplete(() => blinkerSphere.visible = false)
-            )
-            .start();
+        // Do the locomotion
+        locomotion(offset);
 
         // clean up
         guidingController = null;
@@ -61833,6 +61828,7 @@ function onSelectEnd() {
         scene.remove(guidesprite);
     }
 }
+
 rafCallbacks.add(() => {
     if (guidingController) {
         // Controller start position
@@ -61943,53 +61939,6 @@ gamepad.addEventListener('axes1MoveMiddle', handleUp, true);
 gamepad.addEventListener('axes3MoveMiddle', handleUp, true);
 gamepad.addEventListener('axes1MoveEnd', handleUpEnd, true);
 gamepad.addEventListener('axes3MoveEnd', handleUpEnd, true);
-
-
-// simple grid environment makes motion more comfortable
-const gridTexture = new TextureLoader().load('./images/grid.png');
-gridTexture.repeat.multiplyScalar(50);
-gridTexture.wrapS = gridTexture.wrapT = RepeatWrapping;
-const floor2 = new Mesh(
-    new PlaneGeometry(50, 50, 50, 50),
-    new MeshBasicMaterial({
-        map: gridTexture,
-        color: 0x555555,
-        depthWrite: false,
-        blending: AdditiveBlending
-    })
-);
-floor2.rotation.x = -Math.PI / 2;
-floor2.receiveShadow = true;
-floor2.name = 'floor2';
-cameraGroup.add(floor2);
-
-const sky2geometry = new SphereGeometry(25, 50, 50, 0, 2 * Math.PI);
-const sky2material = new MeshBasicMaterial({
-    color: 0xaaaaaa,
-    depthWrite: false
-});
-sky2material.side = BackSide;
-const sky2sphere = new Mesh(sky2geometry, sky2material);
-sky2sphere.name = 'sky2sphere';
-cameraGroup.add(sky2sphere);
-
-const blinkerSphereGeometry = new SphereBufferGeometry(0.3, 64, 8, 0, Math.PI*2, 0, Math.PI * 0.85);
-blinkerSphereGeometry.translate(0,0.3,0);
-const blinkerSphereMaterial = new MeshBasicMaterial({
-    side: BackSide,
-    colorWrite: false
-});
-
-const blinkerSphere = new Mesh( blinkerSphereGeometry, blinkerSphereMaterial );
-blinkerSphere.rotation.set(Math.PI/2, 0, 0);
-blinkerSphere.position.set(0, 0, -0.3);
-blinkerSphere.visible = false;
-camera.add(blinkerSphere);
-
-floor2.renderOrder = -1;
-sky2sphere.renderOrder = -2;
-
-window.blinkerSphere = blinkerSphere;
 
 const targetTexture = new TextureLoader().load('./images/target.png');
 const target = new Mesh(
