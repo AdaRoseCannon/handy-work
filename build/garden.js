@@ -61868,6 +61868,7 @@ rafCallbacks.add(() => {
     const session = renderer.xr.getSession();
     let i = 0;
     if (session) for (const source of session.inputSources) {
+        if (!source.gamepad) continue;
         const controller = renderer.xr.getController(i++);
         const old = prevGamePads.get(source);
         const data = {
