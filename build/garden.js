@@ -61827,7 +61827,8 @@ const guidesprite = new Mesh(
     new MeshBasicMaterial({
         map: guidespriteTexture,
         blending: AdditiveBlending,
-        color: 0x555555
+        color: 0x555555,
+        transparent: true
     })
 );
 guidesprite.rotation.x = -Math.PI/2;
