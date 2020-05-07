@@ -57589,6 +57589,8 @@ TWEEN.version = version;
 
 /* eslint-disable no-case-declarations */
 
+const sceneRadius = 500;
+
 const cameraGroup = new Group();
 
 const canvas = document.querySelector('canvas');
@@ -57600,7 +57602,7 @@ const scene = new Scene();
 scene.name = "xrgarden";
 window.scene = scene;
 const camera = new PerspectiveCamera();
-camera.far = 40;
+camera.far = 1000;
 cameraGroup.add(camera);
 scene.add(cameraGroup);
 
@@ -57621,13 +57623,12 @@ window.addEventListener('resize', onWindowResize, false);
 onWindowResize();
 
 const light = new DirectionalLight(0xffaa33);
-light.position.set(-10, 10, 10);
+light.position.set(-sceneRadius, sceneRadius, sceneRadius);
 light.intensity = 1.0;
 scene.add(light);
-
 // Add the sun
 light.add(
-    new Mesh(new SphereGeometry(1, 32, 32), new MeshBasicMaterial({
+    new Mesh(new SphereGeometry(sceneRadius/10, 32, 32), new MeshBasicMaterial({
         color: 0xffaa33
     }))
 );
@@ -57636,9 +57637,11 @@ const light2 = new AmbientLight(0x003973);
 light2.intensity = 1.0;
 scene.add(light2);
 
-const skygeometry = new SphereGeometry(25, 50, 50, 0, 2 * Math.PI);
-const skymaterial = new MeshBasicMaterial();
-skymaterial.side = BackSide;
+const skygeometry = new SphereGeometry(sceneRadius, 50, 50, 0, 2 * Math.PI);
+const skymaterial = new MeshBasicMaterial({
+    side: BackSide,
+    depthWrite: false
+});
 
 // Nice sky with a bit of dithering to reduce banding.
 skymaterial.onBeforeCompile = function (shader) {
@@ -57671,10 +57674,10 @@ skysphere.name = 'skysphere';
 scene.add(skysphere);
 
 const floorTexture = new TextureLoader().load('https://cdn.glitch.com/3423c223-e1e5-450d-8cfa-2f5215104916%2Fmemphis-mini.png?v=1579618577700');
-floorTexture.repeat.multiplyScalar(8);
+floorTexture.repeat.multiplyScalar(sceneRadius);
 floorTexture.wrapS = floorTexture.wrapT = RepeatWrapping;
 const floor = new Mesh(
-    new PlaneGeometry(50, 50, 50, 50),
+    new PlaneGeometry(sceneRadius*2,sceneRadius*2,50,50),
     new MeshLambertMaterial({
         map: floorTexture
     })
@@ -61959,12 +61962,12 @@ const target = new Mesh(
     new MeshBasicMaterial({
         map: targetTexture,
         blending: AdditiveBlending,
-        color: 0xff0000,
+        color: 0x660000,
         transparent: true
     })
 );
 target.position.z = -5;
-target.position.y = 0.1;
+target.position.y = 0.01;
 target.rotation.x = -Math.PI/2;
 scene.add(target);
 
@@ -61973,11 +61976,11 @@ scene.add(target);
 const canvas$1 = document.createElement('canvas');
 const canvasTexture = new CanvasTexture(canvas$1);
 canvas$1.width = 1024;
-canvas$1.height = 128;
+canvas$1.height = 256;
 const ctx = canvas$1.getContext('2d');
 function writeText(text) {
     if (typeof text !== 'string') text = JSON.stringify(text,null,2);
-    ctx.font = "120px Comic Sans MS";
+    ctx.font = "120px fantasy";
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas$1.width, canvas$1.height);
     ctx.fillStyle = 'white';
@@ -61985,12 +61988,14 @@ function writeText(text) {
     canvasTexture.needsUpdate = true;
 }
 
-const geometry = new PlaneGeometry( 0.3, 0.0375 );
-const material = new MeshBasicMaterial( {map: canvasTexture, color: 0xffeeff, blending: AdditiveBlending} );
+const geometry = new PlaneGeometry( 0.3 * canvas$1.width/1024, 0.3 * canvas$1.height/1024 );
+const material = new MeshBasicMaterial( {map: canvasTexture, blending: AdditiveBlending} );
 const consolePlane = new Mesh( geometry, material );
-consolePlane.position.set(0, 0.01875, -0.1);
+consolePlane.renderOrder = 1;
+consolePlane.position.set(0, 0.5 * 0.3 * canvas$1.height/1024, -0.1);
 consolePlane.rotation.set(-Math.PI/4,0,0);
 controller1.add( consolePlane );
+writeText('hi');
 
 gamepad.addEventListener('gamepadInteraction', function (event) {
     writeText(`${event.detail.type} ${event.detail.value}`);

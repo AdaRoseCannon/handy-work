@@ -21,6 +21,8 @@ import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 import WebXRPolyfill from 'webxr-polyfill';
 import TWEEN from '@tweenjs/tween.js/dist/tween.esm.js';
 
+const sceneRadius = 500;
+
 const cameraGroup = new Group();
 
 const canvas = document.querySelector('canvas');
@@ -32,7 +34,7 @@ const scene = new Scene();
 scene.name = "xrgarden"
 window.scene = scene;
 const camera = new PerspectiveCamera();
-camera.far = 40;
+camera.far = 1000;
 cameraGroup.add(camera);
 scene.add(cameraGroup);
 
@@ -53,13 +55,12 @@ window.addEventListener('resize', onWindowResize, false);
 onWindowResize();
 
 const light = new DirectionalLight(0xffaa33);
-light.position.set(-10, 10, 10);
+light.position.set(-sceneRadius, sceneRadius, sceneRadius);
 light.intensity = 1.0;
 scene.add(light);
-
 // Add the sun
 light.add(
-    new Mesh(new SphereGeometry(1, 32, 32), new MeshBasicMaterial({
+    new Mesh(new SphereGeometry(sceneRadius/10, 32, 32), new MeshBasicMaterial({
         color: 0xffaa33
     }))
 )
@@ -68,9 +69,11 @@ const light2 = new AmbientLight(0x003973);
 light2.intensity = 1.0;
 scene.add(light2);
 
-const skygeometry = new SphereGeometry(25, 50, 50, 0, 2 * Math.PI);
-const skymaterial = new MeshBasicMaterial();
-skymaterial.side = BackSide;
+const skygeometry = new SphereGeometry(sceneRadius, 50, 50, 0, 2 * Math.PI);
+const skymaterial = new MeshBasicMaterial({
+    side: BackSide,
+    depthWrite: false
+});
 
 // Nice sky with a bit of dithering to reduce banding.
 skymaterial.onBeforeCompile = function (shader) {
@@ -103,10 +106,10 @@ skysphere.name = 'skysphere';
 scene.add(skysphere);
 
 const floorTexture = new TextureLoader().load('https://cdn.glitch.com/3423c223-e1e5-450d-8cfa-2f5215104916%2Fmemphis-mini.png?v=1579618577700');
-floorTexture.repeat.multiplyScalar(8);
+floorTexture.repeat.multiplyScalar(sceneRadius);
 floorTexture.wrapS = floorTexture.wrapT = RepeatWrapping;
 const floor = new Mesh(
-    new PlaneGeometry(50, 50, 50, 50),
+    new PlaneGeometry(sceneRadius*2,sceneRadius*2,50,50),
     new MeshLambertMaterial({
         map: floorTexture
     })
