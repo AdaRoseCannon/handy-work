@@ -61668,6 +61668,60 @@ var XRControllerModelFactory = ( function () {
 
 } )();
 
+const prevGamePads = new Map();
+const gamepad = new EventTarget();
+
+function dispatchEvent(type, detail) {
+    const specificEvent = new CustomEvent(type, {detail});
+
+    const generalDetail = {type};
+    Object.assign(generalDetail, detail);
+    const generalEvent = new CustomEvent('gamepadInteraction', {detail: generalDetail});
+
+    gamepad.dispatchEvent(specificEvent);
+    gamepad.dispatchEvent(generalEvent);
+}
+
+rafCallbacks.add(() => {
+    const session = renderer.xr.getSession();
+    let i = 0;
+    if (session) for (const source of session.inputSources) {
+        if (!source.gamepad) continue;
+        const controller = renderer.xr.getController(i++);
+        const old = prevGamePads.get(source);
+        const data = {
+            buttons: source.gamepad.buttons.map(b => b.value),
+            axes: source.gamepad.axes.slice(0)
+        };
+        if (old) {
+            data.buttons.forEach((value,i)=>{
+                if (value !== old.buttons[i]) {
+                    if (value === 1) {
+                        dispatchEvent(`button${i}Down`, {value, source, controller,data});
+                    } else {
+                        dispatchEvent(`button${i}Up`, {value, source, controller,data});
+                    }
+                }
+            });
+            data.axes.forEach((value,i)=>{
+                if (value !== old.axes[i]) {
+                    dispatchEvent(`axes${i}Move`, {value, source, controller,data});
+                    if (old.axes[i] === 0) {
+                        dispatchEvent(`axes${i}MoveStart`, {value, source, controller,data});
+                    }
+                    if (Math.abs(old.axes[i]) < 0.5 && Math.abs(value) > 0.5) {
+                        dispatchEvent(`axes${i}MoveMiddle`, {value, source, controller,data});
+                    }
+                    if (value === 0) {
+                        dispatchEvent(`axes${i}MoveEnd`, {value, source, controller,data});
+                    }
+                }
+            });
+        }
+        prevGamePads.set(source, data);
+    }
+});
+
 function locomotion(offset) {
     const newPos = new Vector3();
     newPos.copy(cameraGroup.position);
@@ -61798,28 +61852,6 @@ const model2 = controllerModelFactory.createControllerModel( controllerGrip2 );
 controllerGrip2.add( model2 );
 cameraGroup.add( controllerGrip2 );
 
-const canvas$1 = document.createElement('canvas');
-const canvasTexture = new CanvasTexture(canvas$1);
-canvas$1.width = 1024;
-canvas$1.height = 128;
-const ctx = canvas$1.getContext('2d');
-function writeText(text) {
-    if (typeof text !== 'string') text = JSON.stringify(text,null,2);
-    ctx.font = "120px Comic Sans MS";
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, 1024, 1024);
-    ctx.fillStyle = 'black';
-    text.split('\n').forEach((str, i) => ctx.fillText(str, 0, (i+1)*120));
-    canvasTexture.needsUpdate = true;
-}
-
-const geometry = new PlaneGeometry( 0.3, 0.0375 );
-const material = new MeshBasicMaterial( {map: canvasTexture, color: 0xffeeff} );
-const consolePlane = new Mesh( geometry, material );
-consolePlane.position.set(0, 0.01875, -0.1);
-consolePlane.rotation.set(-Math.PI/4,0,0);
-controller1.add( consolePlane );
-
 function onSelectStart() {
     guidingController = this;
     guidelight.intensity = 1;
@@ -61894,59 +61926,6 @@ rafCallbacks.add(() => {
     }
 });
 
-const prevGamePads = new Map();
-const gamepad = new EventTarget();
-rafCallbacks.add(() => {
-    const session = renderer.xr.getSession();
-    let i = 0;
-    if (session) for (const source of session.inputSources) {
-        if (!source.gamepad) continue;
-        const controller = renderer.xr.getController(i++);
-        const old = prevGamePads.get(source);
-        const data = {
-            buttons: source.gamepad.buttons.map(b => b.value),
-            axes: source.gamepad.axes.slice(0)
-        };
-        if (old) {
-            data.buttons.forEach((value,i)=>{
-                if (value !== old.buttons[i]) {
-                    if (value === 1) {
-                        const event = new CustomEvent(`button${i}Down`, {detail: {value, source, controller,data}});
-                        writeText(event.type);
-                        gamepad.dispatchEvent(event);
-                    } else {
-                        const event = new CustomEvent(`button${i}Up`, {detail: {value, source, controller,data}});
-                        gamepad.dispatchEvent(event);
-                        writeText(event.type);
-                    }
-                }
-            });
-            data.axes.forEach((value,i)=>{
-                if (value !== old.axes[i]) {
-                    const event = new CustomEvent(`axes${i}Move`, {detail: {value, source, controller,data}});
-                    gamepad.dispatchEvent(event);
-                    if (old.axes[i] === 0) {
-                        const event = new CustomEvent(`axes${i}MoveStart`, {detail: {value, source, controller,data}});
-                        writeText(event.type);
-                        gamepad.dispatchEvent(event);
-                    }
-                    if (Math.abs(old.axes[i]) < 0.5 && Math.abs(value) > 0.5) {
-                        const event = new CustomEvent(`axes${i}MoveMiddle`, {detail: {value, source, controller,data}});
-                        writeText(event.type);
-                        gamepad.dispatchEvent(event);
-                    }
-                    if (value === 0) {
-                        const event = new CustomEvent(`axes${i}MoveEnd`, {detail: {value, source, controller,data}});
-                        writeText(event.type);
-                        gamepad.dispatchEvent(event);
-                    }
-                }
-            });
-        }
-        prevGamePads.set(source, data);
-    }
-});
-
 function handleMove({detail}) {
     // Turn left
     if (detail.value > 0) {
@@ -61973,6 +61952,7 @@ gamepad.addEventListener('axes3MoveMiddle', handleUp, true);
 gamepad.addEventListener('axes1MoveEnd', handleUpEnd, true);
 gamepad.addEventListener('axes3MoveEnd', handleUpEnd, true);
 
+// Red target on the floor
 const targetTexture = new TextureLoader().load('./images/target.png');
 const target = new Mesh(
     new PlaneGeometry(0.5, 0.5, 1, 1),
@@ -61987,6 +61967,34 @@ target.position.z = -5;
 target.position.y = 0.1;
 target.rotation.x = -Math.PI/2;
 scene.add(target);
+
+// Debugging 
+
+const canvas$1 = document.createElement('canvas');
+const canvasTexture = new CanvasTexture(canvas$1);
+canvas$1.width = 1024;
+canvas$1.height = 128;
+const ctx = canvas$1.getContext('2d');
+function writeText(text) {
+    if (typeof text !== 'string') text = JSON.stringify(text,null,2);
+    ctx.font = "120px Comic Sans MS";
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas$1.width, canvas$1.height);
+    ctx.fillStyle = 'white';
+    text.split('\n').forEach((str, i) => ctx.fillText(str, 0, (i+1)*120));
+    canvasTexture.needsUpdate = true;
+}
+
+const geometry = new PlaneGeometry( 0.3, 0.0375 );
+const material = new MeshBasicMaterial( {map: canvasTexture, color: 0xffeeff, blending: AdditiveBlending} );
+const consolePlane = new Mesh( geometry, material );
+consolePlane.position.set(0, 0.01875, -0.1);
+consolePlane.rotation.set(-Math.PI/4,0,0);
+controller1.add( consolePlane );
+
+gamepad.addEventListener('gamepadInteraction', function (event) {
+    writeText(`${event.detail.type} ${event.detail.value}`);
+});
 
 window.renderer = renderer;
 window.camera = camera;

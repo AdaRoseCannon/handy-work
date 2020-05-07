@@ -1,6 +1,6 @@
 import {
     scene, renderer, rafCallbacks, cameraGroup, camera
-} from './scene.js';
+} from '../scene.js';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js'; 
 import {
     Mesh,
@@ -13,9 +13,11 @@ import {
     BufferAttribute,
     LineBasicMaterial,
     AdditiveBlending,
-    Line,
-    CanvasTexture
+    Line
 } from 'three';
+import {
+    gamepad
+} from './gamepad.js';
 
 import {
     locomotion
@@ -84,28 +86,6 @@ const controllerGrip2 = renderer.xr.getControllerGrip( 1 );
 const model2 = controllerModelFactory.createControllerModel( controllerGrip2 );
 controllerGrip2.add( model2 );
 cameraGroup.add( controllerGrip2 );
-
-const canvas = document.createElement('canvas');
-const canvasTexture = new CanvasTexture(canvas);
-canvas.width = 1024;
-canvas.height = 128;
-const ctx = canvas.getContext('2d');
-function writeText(text) {
-    if (typeof text !== 'string') text = JSON.stringify(text,null,2);
-    ctx.font = "120px Comic Sans MS";
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, 1024, 1024);
-    ctx.fillStyle = 'black';
-    text.split('\n').forEach((str, i) => ctx.fillText(str, 0, (i+1)*120));
-    canvasTexture.needsUpdate = true;
-}
-
-const geometry = new PlaneGeometry( 0.3, 0.0375 );
-const material = new MeshBasicMaterial( {map: canvasTexture, color: 0xffeeff} );
-const consolePlane = new Mesh( geometry, material );
-consolePlane.position.set(0, 0.01875, -0.1);
-consolePlane.rotation.set(-Math.PI/4,0,0);
-controller1.add( consolePlane );
 
 function onSelectStart() {
     guidingController = this;
@@ -181,59 +161,6 @@ rafCallbacks.add(() => {
     }
 });
 
-const prevGamePads = new Map();
-const gamepad = new EventTarget();
-rafCallbacks.add(() => {
-    const session = renderer.xr.getSession();
-    let i = 0;
-    if (session) for (const source of session.inputSources) {
-        if (!source.gamepad) continue;
-        const controller = renderer.xr.getController(i++);
-        const old = prevGamePads.get(source);
-        const data = {
-            buttons: source.gamepad.buttons.map(b => b.value),
-            axes: source.gamepad.axes.slice(0)
-        };
-        if (old) {
-            data.buttons.forEach((value,i)=>{
-                if (value !== old.buttons[i]) {
-                    if (value === 1) {
-                        const event = new CustomEvent(`button${i}Down`, {detail: {value, source, controller,data}});
-                        writeText(event.type);
-                        gamepad.dispatchEvent(event);
-                    } else {
-                        const event = new CustomEvent(`button${i}Up`, {detail: {value, source, controller,data}});
-                        gamepad.dispatchEvent(event);
-                        writeText(event.type);
-                    }
-                }
-            });
-            data.axes.forEach((value,i)=>{
-                if (value !== old.axes[i]) {
-                    const event = new CustomEvent(`axes${i}Move`, {detail: {value, source, controller,data}});
-                    gamepad.dispatchEvent(event);
-                    if (old.axes[i] === 0) {
-                        const event = new CustomEvent(`axes${i}MoveStart`, {detail: {value, source, controller,data}});
-                        writeText(event.type);
-                        gamepad.dispatchEvent(event);
-                    }
-                    if (Math.abs(old.axes[i]) < 0.5 && Math.abs(value) > 0.5) {
-                        const event = new CustomEvent(`axes${i}MoveMiddle`, {detail: {value, source, controller,data}});
-                        writeText(event.type);
-                        gamepad.dispatchEvent(event);
-                    }
-                    if (value === 0) {
-                        const event = new CustomEvent(`axes${i}MoveEnd`, {detail: {value, source, controller,data}});
-                        writeText(event.type);
-                        gamepad.dispatchEvent(event);
-                    }
-                }
-            });
-        }
-        prevGamePads.set(source, data);
-    }
-});
-
 function handleMove({detail}) {
     // Turn left
     if (detail.value > 0) {
@@ -261,7 +188,8 @@ gamepad.addEventListener('axes1MoveEnd', handleUpEnd, true);
 gamepad.addEventListener('axes3MoveEnd', handleUpEnd, true);
 
 export {
+    controller1,
+    controller2,
     controllerGrip1,
-    controllerGrip2,
-    gamepad
+    controllerGrip2
 }
