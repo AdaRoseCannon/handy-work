@@ -61982,7 +61982,7 @@ const ctx = canvas$1.getContext('2d');
 function writeText(text) {
     if (typeof text !== 'string') text = JSON.stringify(text,null,2);
     ctx.font = "120px fantasy";
-    ctx.fillStyle = 'darkblue';
+    ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas$1.width, canvas$1.height);
     ctx.fillStyle = 'white';
     text.split('\n').forEach((str, i) => ctx.fillText(str, 0, (i+1)*120));
