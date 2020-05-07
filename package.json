@@ -4,7 +4,7 @@
   "description": "Garden for XR",
   "main": "index.js",
   "scripts": {
-    "start": "node ./",
+    "start": "npm run  build; node ./",
     "build": "rollup -c;  terser --compress --mangle -o build/garden.min.js -- build/garden.js; find build -maxdepth 1 -not -type d -exec du -h {} \\;",
     "develop": "rollup -w -c;  terser --compress --mangle -o build/garden.min.js -- build/garden.js; find build -maxdepth 1 -not -type d -exec du -h {} \\;",
     "test": "echo \"Error: no test specified\" && exit 1"
