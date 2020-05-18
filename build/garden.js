@@ -61749,7 +61749,7 @@ function locomotion(offset) {
 }
 
 // simple grid environment, locked to the user's space, makes motion more comfortable
-const gridTexture = new TextureLoader().load('./images/grid.png');
+const gridTexture = new TextureLoader().load('./assets/grid.png');
 gridTexture.repeat.multiplyScalar(50);
 gridTexture.wrapS = gridTexture.wrapT = RepeatWrapping;
 const floor2 = new Mesh(
@@ -61821,7 +61821,7 @@ const guideline = new Line( lineGeometry, lineMaterial );
 const guidelight = new PointLight(0xffeeaa, 0, 2);
 
 // The target on the ground
-const guidespriteTexture = new TextureLoader().load('./images/target.png');
+const guidespriteTexture = new TextureLoader().load('./assets/target.png');
 const guidesprite = new Mesh(
     new PlaneGeometry(0.3, 0.3, 1, 1),
     new MeshBasicMaterial({
@@ -61956,8 +61956,10 @@ gamepad.addEventListener('axes3MoveMiddle', handleUp, true);
 gamepad.addEventListener('axes1MoveEnd', handleUpEnd, true);
 gamepad.addEventListener('axes3MoveEnd', handleUpEnd, true);
 
+const loader = new GLTFLoader();
+
 // Red target on the floor
-const targetTexture = new TextureLoader().load('./images/target.png');
+const targetTexture = new TextureLoader().load('./assets/target.png');
 const target = new Mesh(
     new PlaneGeometry(0.5, 0.5, 1, 1),
     new MeshBasicMaterial({
@@ -62001,6 +62003,23 @@ writeText('hi');
 gamepad.addEventListener('gamepadInteraction', function (event) {
     writeText(`${event.detail.type} ${event.detail.value}`);
 });
+
+(async function () {
+
+    // Forest from Google Poly, https://poly.google.com/view/2_fv3tn3NG_
+    const {scene: gltfScene} = await new Promise(resolve => loader.load('./assets/forest.glb', resolve));
+    const trees = gltfScene.children[0];
+    trees.position.z = -5;
+    trees.position.y = 2.5;
+    trees.scale.multiplyScalar(10);
+    trees.traverse(o => {
+        if (o.material) {
+            o.material.side = DoubleSide;
+            o.material.depthWrite = true;
+        }
+    });
+    scene.add(trees);
+}());
 
 window.renderer = renderer;
 window.camera = camera;

@@ -40,7 +40,7 @@ function locomotion(offset) {
 }
 
 // simple grid environment, locked to the user's space, makes motion more comfortable
-const gridTexture = new TextureLoader().load('./images/grid.png');
+const gridTexture = new TextureLoader().load('./assets/grid.png');
 gridTexture.repeat.multiplyScalar(50);
 gridTexture.wrapS = gridTexture.wrapT = RepeatWrapping;
 const floor2 = new Mesh(

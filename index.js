@@ -11,7 +11,7 @@ app.get("/", (request, response) => {
 });
 
 app.use("/build", express.static("build"));
-app.use("/images", express.static("images"));
+app.use("/assets", express.static("assets"));
 
 // listen for requests :)
 const listener = app.listen(process.env.PORT, () => {

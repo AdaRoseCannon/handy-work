@@ -53,7 +53,7 @@ const guideline = new Line( lineGeometry, lineMaterial );
 const guidelight = new PointLight(0xffeeaa, 0, 2);
 
 // The target on the ground
-const guidespriteTexture = new TextureLoader().load('./images/target.png');
+const guidespriteTexture = new TextureLoader().load('./assets/target.png');
 const guidesprite = new Mesh(
     new PlaneGeometry(0.3, 0.3, 1, 1),
     new MeshBasicMaterial({
