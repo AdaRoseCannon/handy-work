@@ -32,7 +32,7 @@ function positionAtT(inVec,t,p,v,g) {
 
 // Utility Vectors
 const g = new Vector3(0,-9.8,0);
-const tempVec0 = new Vector3();
+const tempVec = new Vector3();
 const tempVec1 = new Vector3();
 const tempVecP = new Vector3();
 const tempVecV = new Vector3();
@@ -101,22 +101,16 @@ function onSelectEnd() {
         // teleport work out vector from feet to cursor
 
         // feet pos
-        const feetPos = tempVec0;
-        renderer.xr.getCamera(camera).getWorldPosition(feetPos);
+        const feetPos = renderer.xr.getCamera(camera).getWorldPosition(tempVec);
         feetPos.y = 0;
 
-        // cursor pos
-        const cursorPos = tempVec1;
-        const p = tempVecP;
-        guidingController.getWorldPosition(p);
-        const v = tempVecV;
-        guidingController.getWorldDirection(v);
+        // Controller start position
+        const p = guidingController.getWorldPosition(tempVecP);
+        const v = guidingController.getWorldDirection(tempVecV);
         v.multiplyScalar(6);
         const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*g.y))/g.y;
-        positionAtT(cursorPos,t,p,v,g);
-
-        const offset = cursorPos;
-        offset.addScaledVector(feetPos ,-1);
+        const cursorPos = positionAtT(tempVec1,t,p,v,g);
+        const offset = cursorPos.addScaledVector(feetPos ,-1);
 
         // Do the locomotion
         locomotion(offset);
@@ -132,31 +126,26 @@ function onSelectEnd() {
 rafCallbacks.add(() => {
     if (guidingController) {
         // Controller start position
-        const p = tempVecP;
-        guidingController.getWorldPosition(p);
+        const p = guidingController.getWorldPosition(tempVecP);
 
         // virtual tele ball velocity
-        const v = tempVecV;
-        guidingController.getWorldDirection(v);
+        const v = guidingController.getWorldDirection(tempVecV);
         v.multiplyScalar(6);
 
         // Time for tele ball to hit ground
         const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*g.y))/g.y;
 
-        const from = tempVec0;
-        const to = tempVec1;
-
-        from.set(0,0,0);
+        const vertex = tempVec.set(0,0,0);
         for (let i=1; i<=lineSegments; i++) {
 
             // Current position of the virtual ball at time t, written to the variable 'to'
-            positionAtT(to,i*t/lineSegments,p,v,g);
-            guidingController.worldToLocal(to);
-            to.toArray(lineGeometryVertices,i*3);
+            positionAtT(vertex,i*t/lineSegments,p,v,g);
+            guidingController.worldToLocal(vertex);
+            vertex.toArray(lineGeometryVertices,i*3);
         }
         guideline.geometry.attributes.position.needsUpdate = true;
         
-        // Place the light near the end of the poing
+        // Place the light and sprite near the end of the poing
         positionAtT(guidelight.position,t*0.98,p,v,g);
         positionAtT(guidesprite.position,t*0.98,p,v,g);
     }
