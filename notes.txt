@@ -1,7 +1,0 @@
-notes
-
-path for module is wrong in https://immersive-web.github.io/webxr-input-profiles/packages/motion-controllers/
-
-import { fetchProfile, MotionController } from '@webxr-input-profiles/motion-controllers/motion-controllers.module.js'
-
-is missing dist
