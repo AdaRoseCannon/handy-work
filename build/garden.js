@@ -57596,6 +57596,7 @@ const cameraGroup = new Group();
 const canvas = document.querySelector('canvas');
 const renderer = new WebGLRenderer({ canvas: canvas, antialias: true });
 renderer.xr.enabled = true;
+renderer.logarithmicDepthBuffer = true;
 renderer.setPixelRatio(window.devicePixelRatio);
 
 const scene = new Scene();
@@ -61866,18 +61867,20 @@ function onSelectStart() {
 function onSelectEnd() {
     if (guidingController === this) {
 
-        // teleport work out vector from feet to cursor
+        // first work out vector from feet to cursor
 
-        // feet pos
+        // feet position
         const feetPos = renderer.xr.getCamera(camera).getWorldPosition(tempVec);
         feetPos.y = 0;
 
-        // Controller start position
+        // cursor position
         const p = guidingController.getWorldPosition(tempVecP);
         const v = guidingController.getWorldDirection(tempVecV);
         v.multiplyScalar(6);
         const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*g.y))/g.y;
         const cursorPos = positionAtT(tempVec1,t,p,v,g);
+
+        // Offset
         const offset = cursorPos.addScaledVector(feetPos ,-1);
 
         // Do the locomotion
@@ -61896,8 +61899,10 @@ rafCallbacks.add(() => {
         // Controller start position
         const p = guidingController.getWorldPosition(tempVecP);
 
-        // virtual tele ball velocity
+        // Set Vector V to the direction of the controller, at 1m/s
         const v = guidingController.getWorldDirection(tempVecV);
+
+        // Scale the initial velocity to 6m/s
         v.multiplyScalar(6);
 
         // Time for tele ball to hit ground
@@ -61906,7 +61911,7 @@ rafCallbacks.add(() => {
         const vertex = tempVec.set(0,0,0);
         for (let i=1; i<=lineSegments; i++) {
 
-            // Current position of the virtual ball at time t, written to the variable 'to'
+            // set vertex to current position of the virtual ball at time t
             positionAtT(vertex,i*t/lineSegments,p,v,g);
             guidingController.worldToLocal(vertex);
             vertex.toArray(lineGeometryVertices,i*3);

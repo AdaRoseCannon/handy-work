@@ -28,6 +28,7 @@ const cameraGroup = new Group();
 const canvas = document.querySelector('canvas');
 const renderer = new WebGLRenderer({ canvas: canvas, antialias: true });
 renderer.xr.enabled = true;
+renderer.logarithmicDepthBuffer = true;
 renderer.setPixelRatio(window.devicePixelRatio);
 
 const scene = new Scene();
