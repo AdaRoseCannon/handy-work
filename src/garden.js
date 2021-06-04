@@ -20,7 +20,7 @@ import {
     AdditiveBlending,
     CanvasTexture,
     DoubleSide
-} from 'three';
+} from  'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const loader = new GLTFLoader();
@@ -49,7 +49,9 @@ canvas.width = 1024;
 canvas.height = 256;
 const ctx = canvas.getContext('2d');
 function writeText(text) {
-    if (typeof text !== 'string') text = JSON.stringify(text,null,2);
+    if (typeof text !== 'string') {
+        text = JSON.stringify(text,null,2);
+    }
     ctx.font = "120px fantasy";
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);

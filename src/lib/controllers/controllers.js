@@ -2,6 +2,7 @@ import {
     scene, renderer, rafCallbacks, cameraGroup, camera
 } from '../scene.js';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js'; 
+import { XRHandModelFactory } from 'three/examples/jsm/webxr/XRHandModelFactory.js'; 
 import {
     Mesh,
     MeshBasicMaterial,
@@ -14,14 +15,14 @@ import {
     LineBasicMaterial,
     AdditiveBlending,
     Line
-} from 'three';
+} from  'three';
 import {
     gamepad
 } from './gamepad.js';
 
 import {
     locomotion
-} from './locomotion/slide.js';
+} from './locomotion/fade.js';
 
 function positionAtT(inVec,t,p,v,g) {
     inVec.copy(p);
@@ -50,49 +51,27 @@ const lineMaterial = new LineBasicMaterial({ vertexColors: true, blending: Addit
 const guideline = new Line( lineGeometry, lineMaterial );
 
 // The light at the end of the line
-const guidelight = new PointLight(0xffeeaa, 0, 2);
+const guideLight = new PointLight(0xffeeaa, 0, 2);
 
 // The target on the ground
-const guidespriteTexture = new TextureLoader().load('./assets/target.png');
-const guidesprite = new Mesh(
+const guideSpriteTexture = new TextureLoader().load('./assets/target.png');
+const guideSprite = new Mesh(
     new PlaneGeometry(0.3, 0.3, 1, 1),
     new MeshBasicMaterial({
-        map: guidespriteTexture,
+        map: guideSpriteTexture,
         blending: AdditiveBlending,
         color: 0x555555,
         transparent: true
     })
 );
-guidesprite.rotation.x = -Math.PI/2;
+guideSprite.rotation.x = -Math.PI/2;
 
-const controller1 = renderer.xr.getController(0);
-controller1.addEventListener('selectstart', onSelectStart);
-controller1.addEventListener('selectend', onSelectEnd);
-cameraGroup.add(controller1);
 let guidingController = null;
-
-const controller2 = renderer.xr.getController(1);
-controller2.addEventListener('selectstart', onSelectStart);
-controller2.addEventListener('selectend', onSelectEnd);
-cameraGroup.add(controller2);
-
-const controllerModelFactory = new XRControllerModelFactory();
-
-const controllerGrip1 = renderer.xr.getControllerGrip(0);
-const model1 = controllerModelFactory.createControllerModel( controllerGrip1 );
-controllerGrip1.add( model1 );
-cameraGroup.add( controllerGrip1 );
-
-const controllerGrip2 = renderer.xr.getControllerGrip( 1 );
-const model2 = controllerModelFactory.createControllerModel( controllerGrip2 );
-controllerGrip2.add( model2 );
-cameraGroup.add( controllerGrip2 );
-
 function onSelectStart() {
     guidingController = this;
-    guidelight.intensity = 1;
+    guideLight.intensity = 1;
     this.add(guideline);
-    scene.add(guidesprite);
+    scene.add(guideSprite);
 }
 
 function onSelectEnd() {
@@ -119,11 +98,42 @@ function onSelectEnd() {
 
         // clean up
         guidingController = null;
-        guidelight.intensity = 0;
+        guideLight.intensity = 0;
         this.remove(guideline);
-        scene.remove(guidesprite);
+        scene.remove(guideSprite);
     }
 }
+
+const controller1 = renderer.xr.getController(0);
+controller1.addEventListener('selectstart', onSelectStart);
+controller1.addEventListener('selectend', onSelectEnd);
+cameraGroup.add(controller1);
+
+const controller2 = renderer.xr.getController(1);
+controller2.addEventListener('selectstart', onSelectStart);
+controller2.addEventListener('selectend', onSelectEnd);
+cameraGroup.add(controller2);
+
+const controllerModelFactory = new XRControllerModelFactory();
+const handModelFactory = new XRHandModelFactory();
+
+const controllerGrip1 = renderer.xr.getControllerGrip(0);
+const model1 = controllerModelFactory.createControllerModel( controllerGrip1 );
+controllerGrip1.add( model1 );
+cameraGroup.add( controllerGrip1 );
+
+const controllerGrip2 = renderer.xr.getControllerGrip( 1 );
+const model2 = controllerModelFactory.createControllerModel( controllerGrip2 );
+controllerGrip2.add( model2 );
+cameraGroup.add( controllerGrip2 );
+
+const hand1 = renderer.xr.getHand( 0 );
+scene.add( hand1 );
+hand1.add( handModelFactory.createHandModel( hand1, "mesh" ) );
+
+const hand2 = renderer.xr.getHand( 1 );
+scene.add( hand2 );
+hand2.add( handModelFactory.createHandModel( hand2, "mesh" ) );
 
 rafCallbacks.add(() => {
     if (guidingController) {
@@ -149,9 +159,9 @@ rafCallbacks.add(() => {
         }
         guideline.geometry.attributes.position.needsUpdate = true;
         
-        // Place the light and sprite near the end of the poing
-        positionAtT(guidelight.position,t*0.98,p,v,g);
-        positionAtT(guidesprite.position,t*0.98,p,v,g);
+        // Place the light and sprite near the end of the line
+        positionAtT(guideLight.position,t*0.98,p,v,g);
+        positionAtT(guideSprite.position,t*0.98,p,v,g);
     }
 });
 
@@ -186,4 +196,4 @@ export {
     controller2,
     controllerGrip1,
     controllerGrip2
-}
+};

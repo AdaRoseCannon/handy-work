@@ -1,5 +1,4 @@
-/* eslint-disable no-case-declarations */
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
     WebGLRenderer,
     Scene,
@@ -32,7 +31,7 @@ renderer.logarithmicDepthBuffer = true;
 renderer.setPixelRatio(window.devicePixelRatio);
 
 const scene = new Scene();
-scene.name = "xrgarden"
+scene.name = "xrGarden";
 window.scene = scene;
 const camera = new PerspectiveCamera();
 camera.far = 1000;
@@ -64,20 +63,20 @@ light.add(
     new Mesh(new SphereGeometry(sceneRadius/10, 32, 32), new MeshBasicMaterial({
         color: 0xffaa33
     }))
-)
+);
 
 const light2 = new AmbientLight(0x003973);
 light2.intensity = 1.0;
 scene.add(light2);
 
-const skygeometry = new SphereGeometry(sceneRadius, 50, 50, 0, 2 * Math.PI);
-const skymaterial = new MeshBasicMaterial({
+const skyGeometry = new SphereGeometry(sceneRadius, 50, 50, 0, 2 * Math.PI);
+const skyMaterial = new MeshBasicMaterial({
     side: BackSide,
     depthWrite: false
 });
 
 // Nice sky with a bit of dithering to reduce banding.
-skymaterial.onBeforeCompile = function (shader) {
+skyMaterial.onBeforeCompile = function (shader) {
     shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\n#define USE_UV');
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `
     #include <common>
@@ -102,9 +101,9 @@ skymaterial.onBeforeCompile = function (shader) {
         diffuseColor *= mix(col1, col2, mixAmount) + random4;
     `);
 };
-const skysphere = new Mesh(skygeometry, skymaterial);
-skysphere.name = 'skysphere';
-scene.add(skysphere);
+const skySphere = new Mesh(skyGeometry, skyMaterial);
+skySphere.name = 'skySphere';
+scene.add(skySphere);
 
 const floorTexture = new TextureLoader().load('https://cdn.glitch.com/3423c223-e1e5-450d-8cfa-2f5215104916%2Fmemphis-mini.png?v=1579618577700');
 floorTexture.repeat.multiplyScalar(sceneRadius);
@@ -135,4 +134,4 @@ export {
     rafCallbacks,
     cameraGroup,
     camera
-}
+};
