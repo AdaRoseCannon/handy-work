@@ -17,8 +17,10 @@ import {
     RepeatWrapping
 } from 'three';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
-import WebXRPolyfill from 'webxr-polyfill';
 import TWEEN from '@tweenjs/tween.js/dist/tween.esm.js';
+
+// import WebXRPolyfill from 'webxr-polyfill';
+// new WebXRPolyfill();
 
 const sceneRadius = 500;
 
@@ -118,7 +120,6 @@ floor.rotation.x = -Math.PI / 2;
 floor.name = 'floor';
 scene.add(floor);
 
-new WebXRPolyfill();
 document.body.appendChild( VRButton.createButton( renderer ) );
 
 const rafCallbacks = new Set();

@@ -3,6 +3,7 @@ import commonjs from "rollup-plugin-commonjs";
 import { terser } from "rollup-plugin-terser";
 import analyze from 'rollup-plugin-analyzer';
 import alias from '@rollup/plugin-alias';
+import del from 'rollup-plugin-delete'
 
 export default {
 	input: "src/garden.js",
@@ -14,13 +15,18 @@ export default {
 		manualChunks: {
 			// 'three': ['three'],
 			'three': ['three/src/Three.js'],
+			// 'three-stdlib': ['three-stdlib'],
+			// 'tween': ['@tweenjs/tween.js'],
 		},
-		chunkFileNames: '[name].js'
+		chunkFileNames: '[name]-[hash].js'
 	},
 	plugins: [
+		del({
+			targets: 'build/*'
+		}),
 		alias({
 			entries: [
-				{ find: /^three$/, replacement: 'three/src/Three.js' },
+				{ find: /^three$/, replacement: 'three/src/Three.js' }
 			]
 		}),
 		resolve(),
