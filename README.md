@@ -15,5 +15,6 @@ loadPose('fist', '../poses/fist.handpose');
 loadPose('flat', '../poses/flat.handpose');
 loadPose('point', '../poses/point.handpose');
 
+// In RAF
 handyWorkUpdate([controller1, controller2], referenceSpace, frame, callback);
 ```
