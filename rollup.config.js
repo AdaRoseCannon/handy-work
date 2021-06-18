@@ -8,7 +8,7 @@ import comlink from "@surma/rollup-plugin-comlink";
 import omt from "@surma/rollup-plugin-off-main-thread";
 
 export default {
-	input: "src/index.js",
+	input: "src/handy-work.js",
 	preserveEntrySignatures: 'false',
 	output: {
 		dir: "build/",
@@ -37,8 +37,5 @@ export default {
 		}),
 		terser(),
 		analyze(),
-	],
-	external: [
-		"https://cdn.jsdelivr.net/npm/webxr-polyfill@latest/build/webxr-polyfill.js",
-	],
+	]
 };

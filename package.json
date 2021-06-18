@@ -1,7 +1,7 @@
 {
-  "name": "xrgarden",
+  "name": "handy-work",
   "version": "1.0.0",
-  "description": "Garden for XR",
+  "description": "User a Web Worker for Asynchronous hand pose detection",
   "main": "index.js",
   "scripts": {
     "start": "npm run  build; node ./",
