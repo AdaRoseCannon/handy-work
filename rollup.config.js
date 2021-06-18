@@ -15,13 +15,7 @@ export default {
 		format: "esm",
 		sourcemap: true,
 		manualChunks: {
-			// 'three': ['three'],
-			'three': ['three/src/Three.js'],
-			'garden': ['./src/garden.js'],
-			'shared': ['comlink', './src/lib/controllers/hand-poses/normalize.js'],
-			// 'comlink': ['comlink'],
-			// 'three-stdlib': ['three-stdlib'],
-			// 'tween': ['@tweenjs/tween.js'],
+			'shared': ['three/src/Three.js', 'comlink', './src/normalize.js']
 		},
 		chunkFileNames: '[name]-[hash].js'
 	},
@@ -41,7 +35,7 @@ export default {
 		commonjs({
 			include: ["node_modules/**"],
 		}),
-		// terser(),
+		terser(),
 		analyze(),
 	],
 	external: [
