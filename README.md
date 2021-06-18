@@ -1,27 +1,19 @@
-# xr-locomotion-starter
+# handy Work
 
-Starter repo for THREE.js Locomotion
+Framework agnostic Hand Tracking
 
-This is built using THREE.js and compiles with Rollup.
+# Instructions
 
-Edit the files in the `src/` directory to make changes.
+```javascript
+import {
+  update as handyWorkUpdate,
+  loadPose
+} from "../build/handy-work.js";
 
-Dependencies: nodejs
+loadPose('relax', '../poses/relax.handpose');
+loadPose('fist', '../poses/fist.handpose');
+loadPose('flat', '../poses/flat.handpose');
+loadPose('point', '../poses/point.handpose');
 
-Build steps:
-
+handyWorkUpdate([controller1, controller2], referenceSpace, frame, callback);
 ```
-# install dependencies
-npm install
-
-# compile everything
-npm run build
-
-# develop mode
-npm run develop
-
-#start a local server
-npm run start
-```
-
-It's just a static HTML document so sticking it on GitHub pages or any simple http-server would work well.
