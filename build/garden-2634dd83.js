@@ -7212,10 +7212,10 @@ var workerPath = "handpose-3f8d42f7.js";
 var comlinkHandPose = wrap(new Worker(new URL(workerPath, import.meta.url), {type: "module"}));
 
 const HandPose = comlinkHandPose.default;
-await HandPose.loadPose('relax', '/poses/relax.handpose');
-await HandPose.loadPose('fist', '/poses/fist.handpose');
-await HandPose.loadPose('flat', '/poses/flat.handpose');
-await HandPose.loadPose('point', '/poses/point.handpose');
+await HandPose.loadPose('relax', '../poses/relax.handpose');
+await HandPose.loadPose('fist', '../poses/fist.handpose');
+await HandPose.loadPose('flat', '../poses/flat.handpose');
+await HandPose.loadPose('point', '../poses/point.handpose');
 
 const handPoses = new EventTarget();
 
@@ -7670,4 +7670,4 @@ handPoses.addEventListener('pose', function ({detail}) {
 
 window.renderer = renderer;
 window.camera = camera;
-//# sourceMappingURL=garden-e76575e8.js.map
+//# sourceMappingURL=garden-2634dd83.js.map

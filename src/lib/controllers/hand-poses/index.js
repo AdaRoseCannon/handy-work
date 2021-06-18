@@ -4,10 +4,10 @@ import normalize from './normalize.js';
 
 import {default as comlinkHandPose} from "comlink:./handpose.js";
 const HandPose = comlinkHandPose.default;
-await HandPose.loadPose('relax', '/poses/relax.handpose');
-await HandPose.loadPose('fist', '/poses/fist.handpose');
-await HandPose.loadPose('flat', '/poses/flat.handpose');
-await HandPose.loadPose('point', '/poses/point.handpose');
+await HandPose.loadPose('relax', '../poses/relax.handpose');
+await HandPose.loadPose('fist', '../poses/fist.handpose');
+await HandPose.loadPose('flat', '../poses/flat.handpose');
+await HandPose.loadPose('point', '../poses/point.handpose');
 
 const handPoses = new EventTarget();
 
