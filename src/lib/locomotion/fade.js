@@ -1,6 +1,6 @@
 import {
     cameraGroup, camera
-} from '../../scene.js';
+} from '../scene.js';
 import {
     Mesh,
     MeshBasicMaterial,

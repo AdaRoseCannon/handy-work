@@ -1,16 +1,23 @@
 import {
     renderer,
     scene,
-    camera
+    camera,
+    rafCallbacks
 } from './lib/scene.js';
 
 import {
-    controller1
-} from './lib/controllers/controllers.js';
+    controller1, hand1
+} from './lib/controllers/index.js';
 
 import {
     gamepad
 } from './lib/controllers/gamepad.js';
+
+import './lib/locomotion/index.js';
+
+import {
+    handPoses
+} from './lib/controllers/hand-poses/index.js';
 
 import {
     Mesh,
@@ -46,17 +53,18 @@ scene.add(target);
 const canvas = document.createElement('canvas');
 const canvasTexture = new CanvasTexture(canvas);
 canvas.width = 1024;
-canvas.height = 256;
+canvas.height = 1024;
 const ctx = canvas.getContext('2d');
 function writeText(text) {
     if (typeof text !== 'string') {
         text = JSON.stringify(text,null,2);
     }
-    ctx.font = "120px fantasy";
+    const size = 300;
+    ctx.font = size + "px Sans";
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = 'white';
-    text.split('\n').forEach((str, i) => ctx.fillText(str, 0, (i+1)*120));
+    text.split('\n').forEach((str, i) => ctx.fillText(str, 0, (i+1)*size));
     canvasTexture.needsUpdate = true;
 }
 
@@ -71,6 +79,11 @@ writeText('hi');
 
 gamepad.addEventListener('gamepadInteraction', function (event) {
     writeText(`${event.detail.type} ${event.detail.value}`);
+});
+
+handPoses.addEventListener('pose', function ({detail}) {
+    // writeText(detail.join('\n'));
+    writeText(detail[0][0]);
 });
 
 (async function () {

@@ -123,9 +123,9 @@ scene.add(floor);
 document.body.appendChild( VRButton.createButton( renderer ) );
 
 const rafCallbacks = new Set();
-renderer.setAnimationLoop(function (time) {
+renderer.setAnimationLoop(function (time, frame) {
     TWEEN.update(time);
-    rafCallbacks.forEach(cb => cb(time));
+    rafCallbacks.forEach(cb => cb(time, frame));
     renderer.render(scene, camera);
 });
 

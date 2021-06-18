@@ -2,6 +2,10 @@ import {
     renderer, rafCallbacks
 } from '../scene.js';
 
+import {
+    update
+} from './hand-poses/index.js'
+
 const prevGamePads = new Map();
 const gamepad = new EventTarget();
 
@@ -16,8 +20,10 @@ function dispatchEvent(type, detail) {
     gamepad.dispatchEvent(generalEvent);
 }
 
-rafCallbacks.add(() => {
+rafCallbacks.add((timestamp, frame) => {
+    
     const session = renderer.xr.getSession();
+    update(renderer.xr.getReferenceSpace(), frame);
     let i = 0;
     if (session) for (const source of session.inputSources) {
         if (!source.gamepad) continue;
