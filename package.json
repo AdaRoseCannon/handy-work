@@ -2,7 +2,8 @@
   "name": "handy-work",
   "version": "1.0.0",
   "description": "User a Web Worker for Asynchronous hand pose detection",
-  "main": "index.js",
+  "main": "build/handy-work.js",
+  "module": "src/handy-work.js",
   "scripts": {
     "start": "npm run  build; node ./",
     "build": "rollup -c; find build -maxdepth 1 -iname \"*.js\" -not -type d -exec du -h {} \\;",
