@@ -49,7 +49,6 @@ const hands = new Map();
 
 function resetHands() {
 	hands.clear();
-	console.log("reset hands");
 }
 
 let __dumpHands = false;
@@ -130,7 +129,6 @@ function done(distances, handInfo, callback) {
 
 function update(inputSources, referenceSpace, frame, callback) {
 
-	let i = 0;
 	if (inputSources && frame) {
 		const xrViewerPose = frame.getViewerPose(referenceSpace);
 
@@ -138,22 +136,22 @@ function update(inputSources, referenceSpace, frame, callback) {
 			handDataToFile(inputSources, referenceSpace, frame);
 		}
 
-		for (const source of inputSources) {
+		for (const source of inputSources) {			
+			const hand = source.handedness;
+			
 			if (!source.hand) {
 				continue;
 			}
 
-			if (!hands.has(i)) {
-				console.log("no hand, making hand" + i);
-				console.log(inputSources);
+			if (!hands.has(hand)) {
 				const handPosePromise = new HandPose();
-				hands.set(i, handPosePromise);
+				hands.set(hand, handPosePromise);
 				handPosePromise.then(handPose => {
 					const handInfo = new HandInfo({source, handPose});
-					hands.set(i, handInfo);
+					hands.set(hand, handInfo);
 				});
 			} else {
-				const handInfo = hands.get(i);
+				const handInfo = hands.get(hand);
 				if (handInfo instanceof Promise) continue;
 
 				handInfo.update(xrViewerPose, referenceSpace, frame)

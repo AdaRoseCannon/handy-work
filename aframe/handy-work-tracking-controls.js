@@ -135,9 +135,7 @@ AFRAME.registerComponent('handy-work-tracking-controls', {
 		this.referenceSpace = undefined;
 		if (!xrSession) { return; }
 		xrSession.onvisibilitychange = e => {
-			console.log(e);
 			if (e.session.visibilityState == "visible") {
-				console.log("unblurred");
 				window.resetHands();
 			}
 		}
