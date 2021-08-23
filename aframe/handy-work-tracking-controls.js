@@ -119,8 +119,14 @@ AFRAME.registerComponent('handy-work-tracking-controls', {
 		this.bindMethods();
 
 		this.updateReferenceSpace = this.updateReferenceSpace.bind(this);
-		this.el.sceneEl.addEventListener('enter-vr', this.updateReferenceSpace);
-		this.el.sceneEl.addEventListener('exit-vr', this.updateReferenceSpace);
+		this.el.sceneEl.addEventListener('enter-vr', () => {
+			this.updateReferenceSpace();
+			window.resetHands();
+		});
+		this.el.sceneEl.addEventListener('exit-vr', () => {
+			this.updateReferenceSpace();
+			window.resetHands();
+		});
 	},
 
 	updateReferenceSpace: function () {
@@ -128,6 +134,13 @@ AFRAME.registerComponent('handy-work-tracking-controls', {
 		var xrSession = this.el.sceneEl.xrSession;
 		this.referenceSpace = undefined;
 		if (!xrSession) { return; }
+		xrSession.onvisibilitychange = e => {
+			console.log(e);
+			if (e.session.visibilityState == "visible") {
+				console.log("unblurred");
+				window.resetHands();
+			}
+		}
 		var referenceSpaceType = self.el.sceneEl.systems.webxr.sessionReferenceSpaceType;
 		xrSession.requestReferenceSpace(referenceSpaceType).then(function (referenceSpace) {
 			self.referenceSpace = referenceSpace.getOffsetReferenceSpace(new XRRigidTransform({x: 0, y: 1.5, z: 0}));
@@ -183,7 +196,7 @@ AFRAME.registerComponent('handy-work-tracking-controls', {
 			const wrist = hand.get('wrist');
 			const wristPose = frame.getJointPose(wrist, referenceSpace);
 			const firstChild = this.el.firstElementChild;
-			if (firstChild && firstChild.object3D) {
+			if (firstChild?.object3D && wristPose) {
 				firstChild.object3D.matrix.fromArray(wristPose.transform.matrix);
 				firstChild.object3D.matrixAutoUpdate = false;
 			}

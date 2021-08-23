@@ -47,6 +47,11 @@ class HandInfo {
 }
 const hands = new Map();
 
+function resetHands() {
+	hands.clear();
+	console.log("reset hands");
+}
+
 let __dumpHands = false;
 function dumpHands() {
 	__dumpHands = true;
@@ -116,6 +121,7 @@ function done(distances, handInfo, callback) {
 	const handPoseEvent = new CustomEvent('pose', {
 		detail
 	});
+	
 	handPoses.dispatchEvent(handPoseEvent);
 	if (callback) {
 		callback(detail);
@@ -123,7 +129,6 @@ function done(distances, handInfo, callback) {
 }
 
 function update(inputSources, referenceSpace, frame, callback) {
-
 
 	let i = 0;
 	if (inputSources && frame) {
@@ -139,6 +144,8 @@ function update(inputSources, referenceSpace, frame, callback) {
 			}
 
 			if (!hands.has(i)) {
+				console.log("no hand, making hand" + i);
+				console.log(inputSources);
 				const handPosePromise = new HandPose();
 				hands.set(i, handPosePromise);
 				handPosePromise.then(handPose => {
@@ -146,7 +153,6 @@ function update(inputSources, referenceSpace, frame, callback) {
 					hands.set(i, handInfo);
 				});
 			} else {
-
 				const handInfo = hands.get(i);
 				if (handInfo instanceof Promise) continue;
 
@@ -166,6 +172,7 @@ function update(inputSources, referenceSpace, frame, callback) {
 
 export {
 	update,
+	resetHands,
 	dumpHands,
 	handPoses,
 	loadPose,
