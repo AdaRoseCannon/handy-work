@@ -51,22 +51,22 @@ function resetHands() {
 	hands.clear();
 }
 
-let __dumpHands = false;
+window.__dumpHands = false;
 function dumpHands() {
-	__dumpHands = true;
+	window.__dumpHands = true;	
 }
 
+let tempHands = {};
 function handDataToFile(inputSources, referenceSpace, frame) {
 
-	const hands = {};
 	for (const source of inputSources) {
 		if (!source.hand) continue;
-		hands[source.handedness] = source.hand;
+		tempHands[source.handedness] = source.hand;
 	}
-	if (hands.left && hands.right) {
+	if (tempHands.left && tempHands.right) {
 		window.__dumpHands = false;
 
-		const size = hands.left.size;
+		const size = tempHands.left.size;
 		const outData = new Float32Array(
 			1 +         // store size
 			size * 16 + // left hand
@@ -81,8 +81,8 @@ function handDataToFile(inputSources, referenceSpace, frame) {
 		const weights = new Float32Array(outData.buffer, 4 + 2 * (size * 16 * 4), size * 2);
 		weights.fill(1);
 
-		frame.fillPoses( hands.left.values() , referenceSpace, leftHandAccessor );
-		frame.fillPoses( hands.right.values() , referenceSpace, rightHandAccessor );
+		frame.fillPoses( tempHands.left.values() , referenceSpace, leftHandAccessor );
+		frame.fillPoses( tempHands.right.values() , referenceSpace, rightHandAccessor );
 
 		normalize(leftHandAccessor);
 		normalize(rightHandAccessor);
@@ -105,6 +105,8 @@ function handDataToFile(inputSources, referenceSpace, frame) {
 		
 		// Remove anchor from body
 		document.body.removeChild(a);
+
+		tempHands = {};
 	}
 }
 
