@@ -119,14 +119,8 @@ AFRAME.registerComponent('handy-work-tracking-controls', {
 		this.bindMethods();
 
 		this.updateReferenceSpace = this.updateReferenceSpace.bind(this);
-		this.el.sceneEl.addEventListener('enter-vr', () => {
-			this.updateReferenceSpace();
-			window.resetHands();
-		});
-		this.el.sceneEl.addEventListener('exit-vr', () => {
-			this.updateReferenceSpace();
-			window.resetHands();
-		});
+		this.el.sceneEl.addEventListener('enter-vr', this.updateReferenceSpace);
+		this.el.sceneEl.addEventListener('exit-vr', this.updateReferenceSpace);
 	},
 
 	updateReferenceSpace: function () {
@@ -134,11 +128,6 @@ AFRAME.registerComponent('handy-work-tracking-controls', {
 		var xrSession = this.el.sceneEl.xrSession;
 		this.referenceSpace = undefined;
 		if (!xrSession) { return; }
-		xrSession.onvisibilitychange = e => {
-			if (e.session.visibilityState == "visible") {
-				window.resetHands();
-			}
-		}
 		var referenceSpaceType = self.el.sceneEl.systems.webxr.sessionReferenceSpaceType;
 		xrSession.requestReferenceSpace(referenceSpaceType).then(function (referenceSpace) {
 			self.referenceSpace = referenceSpace.getOffsetReferenceSpace(new XRRigidTransform({x: 0, y: 1.5, z: 0}));
@@ -204,7 +193,7 @@ AFRAME.registerComponent('handy-work-tracking-controls', {
 	handyWorkCallback: function ({
 		distances
 	}) {
-		console.log(distances[0][0]);
+		//console.log(distances[0][0]);
 		this.el.emit('pose' + distances[0][0]);
 		this.el.emit('pose', distances[0][0]);
 	},

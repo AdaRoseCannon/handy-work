@@ -6,13 +6,11 @@
 	<script type="module">
 		import {
 			update as handyWorkUpdate,
-			resetHands,
 			loadPose,
 			dumpHands
 		} from "../build/handy-work.js";
 				
 		window.handyWorkUpdate = handyWorkUpdate;
-		window.resetHands = resetHands;
 
 		loadPose('relax', '../poses/relax.handpose');
 		loadPose('fist', '../poses/fist.handpose');

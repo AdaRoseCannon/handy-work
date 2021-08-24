@@ -8,13 +8,18 @@ function loadPose(name, url) {
 	return HandPose.loadPose(name, url);
 }
 
+// Add event listeners
+let listenersLoaded = false;
+window.addEventListener('enter-vr', resetHands);
+window.addEventListener('exit-vr', resetHands);
+
 const handPoses = new EventTarget();
 
 class HandInfo {
 	#ready
 
 	constructor({
-		source, handPose
+		session, source, handPose
 	}) {
 		this.handPose = handPose;
 		this.size = source.hand.size;
@@ -23,6 +28,10 @@ class HandInfo {
 		this.jointMatrixArray = new Float32Array(source.hand.size * 16);
 		this.handedness = source.handedness;
 
+		if (!listenersLoaded) {
+			session.onvisibilitychange = resetHands;
+			listenersLoaded = true;
+		}
 		this.#ready = true;
 	}
 
@@ -149,7 +158,8 @@ function update(inputSources, referenceSpace, frame, callback) {
 				const handPosePromise = new HandPose();
 				hands.set(hand, handPosePromise);
 				handPosePromise.then(handPose => {
-					const handInfo = new HandInfo({source, handPose});
+					const session = frame.session;
+					const handInfo = new HandInfo({session, source, handPose});
 					hands.set(hand, handInfo);
 				});
 			} else {
