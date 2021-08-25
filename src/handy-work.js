@@ -135,7 +135,6 @@ function done(distances, handInfo, callback) {
 	}
 }
 
-
 let session;
 function init(session) {
 	session.addEventListener('reset', resetHands);
