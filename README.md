@@ -2,7 +2,7 @@
 
 Framework agnostic Hand Tracking
 
-# Instructions
+## Instructions
 
 ```javascript
 import {

@@ -183,7 +183,7 @@ AFRAME.registerComponent('handy-work-tracking-controls', {
 			const wrist = hand.get('wrist');
 			const wristPose = frame.getJointPose(wrist, referenceSpace);
 			const firstChild = this.el.firstElementChild;
-			if (firstChild && firstChild.object3D) {
+			if (firstChild?.object3D && wristPose) {
 				firstChild.object3D.matrix.fromArray(wristPose.transform.matrix);
 				firstChild.object3D.matrixAutoUpdate = false;
 			}
@@ -193,7 +193,7 @@ AFRAME.registerComponent('handy-work-tracking-controls', {
 	handyWorkCallback: function ({
 		distances
 	}) {
-		console.log(distances[0][0]);
+		//console.log(distances[0][0]);
 		this.el.emit('pose' + distances[0][0]);
 		this.el.emit('pose', distances[0][0]);
 	},

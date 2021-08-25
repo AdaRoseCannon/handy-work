@@ -8,13 +8,18 @@ function loadPose(name, url) {
 	return HandPose.loadPose(name, url);
 }
 
+// Add event listeners
+let listenersLoaded = false;
+window.addEventListener('enter-vr', resetHands);
+window.addEventListener('exit-vr', resetHands);
+
 const handPoses = new EventTarget();
 
 class HandInfo {
 	#ready
 
 	constructor({
-		source, handPose
+		session, source, handPose
 	}) {
 		this.handPose = handPose;
 		this.size = source.hand.size;
@@ -23,6 +28,10 @@ class HandInfo {
 		this.jointMatrixArray = new Float32Array(source.hand.size * 16);
 		this.handedness = source.handedness;
 
+		if (!listenersLoaded) {
+			session.onvisibilitychange = resetHands;
+			listenersLoaded = true;
+		}
 		this.#ready = true;
 	}
 
@@ -47,22 +56,26 @@ class HandInfo {
 }
 const hands = new Map();
 
-let __dumpHands = false;
-function dumpHands() {
-	__dumpHands = true;
+function resetHands() {
+	hands.clear();
 }
 
+window.__dumpHands = false;
+function dumpHands() {
+	window.__dumpHands = true;	
+}
+
+let tempHands = {};
 function handDataToFile(inputSources, referenceSpace, frame) {
 
-	const hands = {};
 	for (const source of inputSources) {
 		if (!source.hand) continue;
-		hands[source.handedness] = source.hand;
+		tempHands[source.handedness] = source.hand;
 	}
-	if (hands.left && hands.right) {
+	if (tempHands.left && tempHands.right) {
 		window.__dumpHands = false;
 
-		const size = hands.left.size;
+		const size = tempHands.left.size;
 		const outData = new Float32Array(
 			1 +         // store size
 			size * 16 + // left hand
@@ -77,8 +90,8 @@ function handDataToFile(inputSources, referenceSpace, frame) {
 		const weights = new Float32Array(outData.buffer, 4 + 2 * (size * 16 * 4), size * 2);
 		weights.fill(1);
 
-		frame.fillPoses( hands.left.values() , referenceSpace, leftHandAccessor );
-		frame.fillPoses( hands.right.values() , referenceSpace, rightHandAccessor );
+		frame.fillPoses( tempHands.left.values() , referenceSpace, leftHandAccessor );
+		frame.fillPoses( tempHands.right.values() , referenceSpace, rightHandAccessor );
 
 		normalize(leftHandAccessor);
 		normalize(rightHandAccessor);
@@ -101,6 +114,8 @@ function handDataToFile(inputSources, referenceSpace, frame) {
 		
 		// Remove anchor from body
 		document.body.removeChild(a);
+
+		tempHands = {};
 	}
 }
 
@@ -116,6 +131,7 @@ function done(distances, handInfo, callback) {
 	const handPoseEvent = new CustomEvent('pose', {
 		detail
 	});
+	
 	handPoses.dispatchEvent(handPoseEvent);
 	if (callback) {
 		callback(detail);
@@ -124,8 +140,6 @@ function done(distances, handInfo, callback) {
 
 function update(inputSources, referenceSpace, frame, callback) {
 
-
-	let i = 0;
 	if (inputSources && frame) {
 		const xrViewerPose = frame.getViewerPose(referenceSpace);
 
@@ -133,21 +147,23 @@ function update(inputSources, referenceSpace, frame, callback) {
 			handDataToFile(inputSources, referenceSpace, frame);
 		}
 
-		for (const source of inputSources) {
+		for (const source of inputSources) {			
+			const hand = source.handedness;
+			
 			if (!source.hand) {
 				continue;
 			}
 
-			if (!hands.has(i)) {
+			if (!hands.has(hand)) {
 				const handPosePromise = new HandPose();
-				hands.set(i, handPosePromise);
+				hands.set(hand, handPosePromise);
 				handPosePromise.then(handPose => {
-					const handInfo = new HandInfo({source, handPose});
-					hands.set(i, handInfo);
+					const session = frame.session;
+					const handInfo = new HandInfo({session, source, handPose});
+					hands.set(hand, handInfo);
 				});
 			} else {
-
-				const handInfo = hands.get(i);
+				const handInfo = hands.get(hand);
 				if (handInfo instanceof Promise) continue;
 
 				handInfo.update(xrViewerPose, referenceSpace, frame)
@@ -166,6 +182,7 @@ function update(inputSources, referenceSpace, frame, callback) {
 
 export {
 	update,
+	resetHands,
 	dumpHands,
 	handPoses,
 	loadPose,

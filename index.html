@@ -6,7 +6,8 @@
 	<script type="module">
 		import {
 			update as handyWorkUpdate,
-			loadPose
+			loadPose,
+			dumpHands
 		} from "../build/handy-work.js";
 				
 		window.handyWorkUpdate = handyWorkUpdate;
@@ -15,6 +16,11 @@
 		loadPose('fist', '../poses/fist.handpose');
 		loadPose('flat', '../poses/flat.handpose');
 		loadPose('point', '../poses/point.handpose');
+		loadPose('horns', '../poses/horns.handpose');
+		loadPose('shaka', '../poses/shaka.handpose');
+		loadPose('vulcan', '../poses/vulcan.handpose');
+
+		//setTimeout(dumpHands, 10000);
 	</script>
 </head>
 

@@ -4,6 +4,7 @@ import { terser } from "rollup-plugin-terser";
 import analyze from 'rollup-plugin-analyzer';
 import alias from '@rollup/plugin-alias';
 import del from 'rollup-plugin-delete'
+import serve from 'rollup-plugin-serve';
 import comlink from "@surma/rollup-plugin-comlink";
 import omt from "@surma/rollup-plugin-off-main-thread";
 
@@ -37,5 +38,13 @@ export default {
 		}),
 		terser(),
 		analyze(),
+		serve({
+			open: true,
+			host: 'localhost',
+			port: 9001,
+			mimeTypes: {
+				'application/javascript': ['js_commonjs-proxy']
+			}
+		})
 	]
 };
