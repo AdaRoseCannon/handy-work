@@ -19,7 +19,7 @@ class HandInfo {
 	#ready
 
 	constructor({
-		session, source, handPose
+		source, handPose
 	}) {
 		this.handPose = handPose;
 		this.size = source.hand.size;
@@ -29,7 +29,6 @@ class HandInfo {
 		this.handedness = source.handedness;
 
 		if (!listenersLoaded) {
-			session.onvisibilitychange = resetHands;
 			listenersLoaded = true;
 		}
 		this.#ready = true;
@@ -65,8 +64,8 @@ function dumpHands() {
 	window.__dumpHands = true;	
 }
 
-let tempHands = {};
 function handDataToFile(inputSources, referenceSpace, frame) {
+	const tempHands = {};
 
 	for (const source of inputSources) {
 		if (!source.hand) continue;
@@ -114,8 +113,6 @@ function handDataToFile(inputSources, referenceSpace, frame) {
 		
 		// Remove anchor from body
 		document.body.removeChild(a);
-
-		tempHands = {};
 	}
 }
 
@@ -138,15 +135,28 @@ function done(distances, handInfo, callback) {
 	}
 }
 
+
+let session;
+function init(session) {
+	session.addEventListener('reset', resetHands);
+	session.addEventListener('end', resetHands);
+	session.addEventListener('visibilitychange', resetHands);
+	session.addEventListener('inputsourceschange', resetHands);
+}
+
 function update(inputSources, referenceSpace, frame, callback) {
 
 	if (inputSources && frame) {
-		const xrViewerPose = frame.getViewerPose(referenceSpace);
 
-		if (__dumpHands) {
+		if (frame.session !== session) {
+			init(frame.session);
+		}
+
+		if (window.__dumpHands) {
 			handDataToFile(inputSources, referenceSpace, frame);
 		}
 
+		const xrViewerPose = frame.getViewerPose(referenceSpace);
 		for (const source of inputSources) {			
 			const hand = source.handedness;
 			
