@@ -1,6 +1,6 @@
 {
   "name": "handy-work",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Use a Web Worker for asynchronous hand pose detection.",
   "main": "build/handy-work.js",
   "module": "src/handy-work.js",
