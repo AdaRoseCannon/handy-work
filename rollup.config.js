@@ -6,7 +6,7 @@ import alias from '@rollup/plugin-alias';
 import del from 'rollup-plugin-delete'
 import serve from 'rollup-plugin-serve';
 import comlink from "@surma/rollup-plugin-comlink";
-import omt from "@surma/rollup-plugin-off-main-thread";
+import OMT from "@surma/rollup-plugin-off-main-thread";
 
 export default {
 	input: "src/handy-work.js",
@@ -31,22 +31,21 @@ export default {
 		}),
 		comlink({
 			useModuleWorker: true
-		}), omt({
-			useEval: true
 		}),
+		OMT({}),
 		resolve(),
 		commonjs({
 			include: ["node_modules/**"],
 		}),
 		terser(),
 		analyze(),
-		serve({
-			open: true,
-			host: 'localhost',
-			port: 9001,
-			mimeTypes: {
-				'application/javascript': ['js_commonjs-proxy']
-			}
-		})
+		// serve({
+		// 	open: true,
+		// 	host: 'localhost',
+		// 	port: 9001,
+		// 	mimeTypes: {
+		// 		'application/javascript': ['js_commonjs-proxy']
+		// 	}
+		// })
 	]
 };
