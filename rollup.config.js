@@ -31,7 +31,9 @@ export default {
 		}),
 		comlink({
 			useModuleWorker: true
-		}), omt(),
+		}), omt({
+			useEval: true
+		}),
 		resolve(),
 		commonjs({
 			include: ["node_modules/**"],
