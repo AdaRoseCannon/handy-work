@@ -2,11 +2,11 @@
   "name": "handy-work",
   "version": "1.1.0",
   "description": "Use a Web Worker for asynchronous hand pose detection.",
-  "main": "build/handy-work.js",
+  "main": "build/cjs/handy-work.standalone.js",
   "module": "src/handy-work.js",
   "scripts": {
     "start": "npm run build && node ./",
-    "build": "rollup -c && rollup -c && rollup -c ./rollup-compact.config.js && find build -maxdepth 2 -iname \"*.js\" -not -type d -exec du -h {} \\;",
+    "build": "rollup -c && rollup -c && rollup -c ./rollup-standalone.config.js && rollup -f cjs ./build/esm/handy-work.standalone.js -o ./build/cjs/handy-work.standalone.js && find build -maxdepth 2 -iname \"*.js\" -not -type d -exec du -h {} \\;",
     "develop": "rollup -w -c",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
