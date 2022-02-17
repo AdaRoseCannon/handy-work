@@ -12,13 +12,13 @@ export default {
 	input: "src/handy-work.js",
 	preserveEntrySignatures: 'false',
 	output: {
-		dir: "build/",
+		dir: "build/esm/",
 		format: "esm",
 		sourcemap: true,
 		manualChunks: {
 			'shared': ['three/src/Three.js', 'comlink', './src/normalize.js']
 		},
-		chunkFileNames: '[name]-[hash].js'
+		chunkFileNames: '[name].js'
 	},
 	plugins: [
 		del({
@@ -37,7 +37,7 @@ export default {
 		commonjs({
 			include: ["node_modules/**"],
 		}),
-		terser(),
+		// terser(),
 		analyze(),
 		// serve({
 		// 	open: true,

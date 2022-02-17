@@ -1,7 +1,6 @@
+import { M as Matrix4, Q as Quaternion, V as Vector3, n as normalize, t as transfer, e as expose } from './shared.js';
+
 // this runs as a web worker
-import {transfer} from 'comlink';
-import normalize from './normalize.js';
-import { Matrix4, Quaternion, Vector3 } from 'three';
 
 console.log('Worker started');
 
@@ -37,7 +36,7 @@ class HandPose {
 				1 + // poseHandDataSize offset
 				(poseHandDataSize * 16) * isRight // offset for right hand
 			)*4 , poseHandDataSize * 16);
-			const poseWeightData = new Float32Array(poseData.buffer, (
+			new Float32Array(poseData.buffer, (
 				1 + // poseHandDataSize offset
 				(poseHandDataSize * 16) * 2 + // offset for after hand data
 				(poseHandDataSize * isRight)      // offset for right hand
@@ -79,4 +78,10 @@ class HandPose {
 	}
 }
 
-export default HandPose;
+var m = /*#__PURE__*/Object.freeze({
+	__proto__: null,
+	'default': HandPose
+});
+
+expose(m);
+//# sourceMappingURL=handpose.js.map

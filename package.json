@@ -6,7 +6,7 @@
   "module": "src/handy-work.js",
   "scripts": {
     "start": "npm run build && node ./",
-    "build": "rollup -c && find build -maxdepth 1 -iname \"*.js\" -not -type d -exec du -h {} \\;",
+    "build": "rollup -c && rollup -c && rollup -c ./rollup-compact.config.js && find build -maxdepth 2 -iname \"*.js\" -not -type d -exec du -h {} \\;",
     "develop": "rollup -w -c",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
