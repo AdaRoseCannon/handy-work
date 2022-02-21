@@ -6,7 +6,7 @@
   "module": "src/handy-work.js",
   "scripts": {
     "start": "npm run build && node ./",
-    "build": "rollup -c && rollup -c ./rollup-aframe.config.js && rollup -c ./rollup-standalone.config.js && rollup -f cjs ./build/esm/handy-work.standalone.js -o ./build/cjs/handy-work.standalone.js && find build -maxdepth 2 -iname \"*.js\" -not -type d -exec du -h {} \\;",
+    "build": "rollup -c && rollup -c ./rollup-aframe.config.js && rollup -c ./rollup-standalone.config.js && rollup -f cjs ./build/esm/handy-work.standalone.js -o ./build/cjs/handy-work.standalone.js && rollup -c -p rollup-plugin-terser && find build -maxdepth 2 -iname \"*.js\" -not -type d -exec du -h {} \\;",
     "develop": "rollup -w -c",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

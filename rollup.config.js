@@ -1,6 +1,6 @@
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "rollup-plugin-commonjs";
-import { terser } from "rollup-plugin-terser";
+// import { terser } from "rollup-plugin-terser";
 import analyze from 'rollup-plugin-analyzer';
 import alias from '@rollup/plugin-alias';
 import del from 'rollup-plugin-delete'
@@ -21,9 +21,6 @@ export default {
 		chunkFileNames: '[name].js'
 	},
 	plugins: [
-		del({
-			targets: 'build/*'
-		}),
 		alias({
 			entries: [
 				{ find: /^three$/, replacement: 'three/src/Three.js' }
@@ -37,7 +34,7 @@ export default {
 		commonjs({
 			include: ["node_modules/**"],
 		}),
-		terser(),
+		// terser(),
 		analyze(),
 		// serve({
 		// 	open: true,
