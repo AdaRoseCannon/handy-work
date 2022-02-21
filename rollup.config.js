@@ -4,7 +4,7 @@ import { terser } from "rollup-plugin-terser";
 import analyze from 'rollup-plugin-analyzer';
 import alias from '@rollup/plugin-alias';
 import del from 'rollup-plugin-delete'
-import serve from 'rollup-plugin-serve';
+// import serve from 'rollup-plugin-serve';
 import comlink from "@surma/rollup-plugin-comlink";
 import OMT from "@surma/rollup-plugin-off-main-thread";
 
@@ -37,7 +37,7 @@ export default {
 		commonjs({
 			include: ["node_modules/**"],
 		}),
-		// terser(),
+		terser(),
 		analyze(),
 		// serve({
 		// 	open: true,

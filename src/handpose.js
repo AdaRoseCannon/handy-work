@@ -74,6 +74,10 @@ class HandPose {
 			distances: distances.sort((a,b)=>a[1]-b[1])
 		}, [handPose.buffer]);
 	}
+	getPose(name) {
+		// This is a copy not a transfer
+		return poses.get(name);
+	}
 	getMatchedPoses () {
 		return this.#matches;
 	}

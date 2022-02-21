@@ -8,6 +8,10 @@ function loadPose(name, url) {
 	return HandPose.loadPose(name, url);
 }
 
+function getPose(name) {
+	return HandPose.getPose(name);
+}
+
 // Add event listeners
 let listenersLoaded = false;
 window.addEventListener('enter-vr', resetHands);
@@ -59,9 +63,9 @@ function resetHands() {
 	hands.clear();
 }
 
-window.__dumpHands = false;
+let __dumphands = false;
 function dumpHands() {
-	window.__dumpHands = true;	
+	__dumphands = true;	
 }
 
 function handDataToFile(inputSources, referenceSpace, frame) {
@@ -72,7 +76,7 @@ function handDataToFile(inputSources, referenceSpace, frame) {
 		tempHands[source.handedness] = source.hand;
 	}
 	if (tempHands.left && tempHands.right) {
-		window.__dumpHands = false;
+		__dumphands = false;
 
 		const size = tempHands.left.size;
 		const outData = new Float32Array(
@@ -151,7 +155,7 @@ function update(inputSources, referenceSpace, frame, callback) {
 			init(frame.session);
 		}
 
-		if (window.__dumpHands) {
+		if (__dumphands) {
 			handDataToFile(inputSources, referenceSpace, frame);
 		}
 
@@ -196,5 +200,6 @@ export {
 	handPoses,
 	loadPose,
 	normalize,
-	handDataToFile
+	handDataToFile,
+	getPose
 };
