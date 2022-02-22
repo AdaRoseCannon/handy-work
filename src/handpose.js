@@ -1,7 +1,7 @@
 // this runs as a web worker
 import {transfer} from 'comlink';
 import normalize from './normalize.js';
-import { Matrix4, Quaternion, Vector3 } from 'three';
+import { Matrix4, Quaternion } from 'three';
 
 console.log('Worker started');
 
@@ -10,10 +10,6 @@ const tempMat1 = new Matrix4();
 const tempMat2 = new Matrix4();
 const tempQuat1 = new Quaternion();
 const tempQuat2 = new Quaternion();
-const tempVec1 = new Vector3();
-const tempVec2 = new Vector3();
-
-
 class HandPose {
 	#matches
 	constructor () {
@@ -65,9 +61,7 @@ class HandPose {
 				tempMat2.fromArray(handPose, o);
 				tempQuat1.setFromRotationMatrix(tempMat1);
 				tempQuat2.setFromRotationMatrix(tempMat2);
-				tempVec1.set(0,0,0.1).applyQuaternion(tempQuat1);
-				tempVec2.set(0,0,0.1).applyQuaternion(tempQuat2);
-				dist += tempVec1.distanceTo(tempVec2) * poseWeight;
+				dist += tempQuat1.angleTo(tempQuat2) * poseWeight;
 			}
 			dist = dist / totalWeight;
 			distances.push([name, dist]);
