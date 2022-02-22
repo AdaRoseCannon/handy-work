@@ -67,6 +67,15 @@ The following are exposed on the component itself so you can hook into the libra
 Use the following properties to customise the component
 
 <!--SCHEMA-->
+| Property         | Description                                                                | Type   | Default                                                                                            |
+| :--------------- | :------------------------------------------------------------------------- | :----- | :------------------------------------------------------------------------------------------------- |
+| left             | URL for left controller                                                    | model  | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/left.glb  |
+| right            | URL for right controller                                                   | model  | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/right.glb |
+| materialOverride | Which hand to use the `material` component for One of both,left,right,none | string | both                                                                                               |
+| fuseVShort       | Time for a pose to trigger a pose event (ms)                               | number | 48                                                                                                 |
+| fuseShort        | Time for a pose to trigger a pose_fuseShort event (ms)                     | number | 480                                                                                                |
+| fuseLong         | Time for a pose to trigger a pose_fuseLong event (ms)                      | number | 1440                                                                                               |
+
 <!--SCHEMA_END-->
 
 Child entities with the `data-left` or `data-right` properties have their position and 
