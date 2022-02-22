@@ -37,24 +37,30 @@ const joints = [
 AFRAME.registerComponent("handy-controls", {
   schema: {
     left: {
+      description: 'URL for left controller',
       type: 'model',
       default: DEFAULT_HAND_PROFILE_PATH + "left.glb",
     },
     right: {
+      description: 'URL for right controller',
       type: 'model',
       default: DEFAULT_HAND_PROFILE_PATH + "right.glb",
     },
     materialOverride: {
+      description: 'Which hand to use the `material` component for',
       oneOf: ['both', 'left', 'right', 'none'],
       default: 'both'
     },
     fuseVShort: {
+      description: 'Time for a pose to trigger a pose event (ms)',
       default:48
     },
     fuseShort: {
+      description: 'Time for a pose to trigger a pose_fuseShort event (ms)',
       default:480
     },
     fuseLong: {
+      description: 'Time for a pose to trigger a pose_fuseLong event (ms)',
       default:1440
     }
   },
@@ -88,11 +94,15 @@ AFRAME.registerComponent("handy-controls", {
     .then(function ({
 			update,
 			loadPose,
-			dumpHands
+			dumpHands,
+      setPose,
+      getPose
     }) {
       this.handyWorkUpdate = update;
       this.dumpHands = dumpHands;
       this.loadPose = loadPose;
+      this.setPose = setPose;
+      this.getPose = getPose;
 
       loadPose('relax', POSE_FOLDER + 'relax.handpose');
       loadPose('fist', POSE_FOLDER + 'fist.handpose');

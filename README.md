@@ -50,7 +50,57 @@ import('https://cdn.jsdelivr.net/npm/handy-work@1.4.0/build/esm/handy-work.stand
 }.bind(this));
 ```
 
-## AFrame Example
+## AFrame
+
+The controls provide the ability to render hands and attach objects to individual joints.
+
+It also fires events for when poses have been held for certain lengths of time.
+
+The following are exposed on the component itself so you can hook into the library
+
+* handyWorkUpdate
+* dumpHands
+* loadPose
+* setPose 
+* getPose 
+
+Use the following properties to customise the component
+
+<!--SCHEMA-->
+<!--SCHEMA_END-->
+
+Child entities with the `data-left` or `data-right` properties have their position and 
+rotation set to match the bones they are set to where the bone can be one of:
+
+* grip (not a bone, where someone would hold an object)
+* ray (not a bone, the target ray space from WebXR)
+* wrist
+* thumb-metacarpal
+* thumb-phalanx-proximal
+* thumb-phalanx-distal
+* thumb-tip
+* index-finger-metacarpal
+* index-finger-phalanx-proximal
+* index-finger-phalanx-intermediate
+* index-finger-phalanx-distal
+* index-finger-tip
+* middle-finger-metacarpal
+* middle-finger-phalanx-proximal
+* middle-finger-phalanx-intermediate
+* middle-finger-phalanx-distal
+* middle-finger-tip
+* ring-finger-metacarpal
+* ring-finger-phalanx-proximal
+* ring-finger-phalanx-intermediate
+* ring-finger-phalanx-distal
+* ring-finger-tip
+* pinky-finger-metacarpal
+* pinky-finger-phalanx-proximal
+* pinky-finger-phalanx-intermediate
+* pinky-finger-phalanx-distal
+* pinky-finger-tip
+
+Example use case:
 
 ```html
 <!-- After the AFrame script -->
