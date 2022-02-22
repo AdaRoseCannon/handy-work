@@ -1,6 +1,5 @@
 /**
- * A module for doing efficient real-time pose detection from
- * WebXR Hand Tracking using Web Workers to ensure it doesn't interfere with the main thread
+ * Documentation for using build/esm/handy-work.js or build/esm/handy-work.standalone.js
  * @module handy-work
  */
 
