@@ -12,6 +12,10 @@ function getPose(name) {
 	return HandPose.getPose(name);
 }
 
+function setPose(name, pose) {
+	return HandPose.setPose(name, pose);
+}
+
 // Add event listeners
 let listenersLoaded = false;
 window.addEventListener('enter-vr', resetHands);
@@ -201,5 +205,6 @@ export {
 	loadPose,
 	normalize,
 	handDataToFile,
-	getPose
+	getPose,
+	setPose
 };
