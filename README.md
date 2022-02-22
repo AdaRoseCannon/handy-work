@@ -2,6 +2,8 @@
 
 Framework agnostic Hand Tracking
 
+<!--DOCS-->
+<!--DOCS_END-->
 ## Instructions
 
 ```javascript

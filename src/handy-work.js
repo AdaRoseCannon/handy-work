@@ -1,18 +1,41 @@
+/**
+ * A module for doing efficient real-time pose detection from
+ * WebXR Hand Tracking using Web Workers to ensure it doesn't interfere with the main thread
+ * @module handy-work
+ */
+
 import {transfer} from 'comlink'; 
 import normalize from './normalize.js';
 
 import {default as comlinkHandPose} from "comlink:./handpose.js";
 const HandPose = comlinkHandPose.default;
 
-function loadPose(name, url) {
+/**
+ * Loads a pose from the Web the recommended way of using this API
+ * @param {string} name Name of the pose
+ * @param {string} url URL of the pose to download and add to the registry
+ * @returns {Promise<void>} Resolves once it has been completed
+ */
+export function loadPose(name, url) {
 	return HandPose.loadPose(name, url);
 }
 
-function getPose(name) {
+/**
+ * Get a pose from the registry
+ * @param {string} name of the pose to fetch
+ * @returns {Promise<Float32Array>} A copy of the pose from the registry in the worker
+ */
+export function getPose(name) {
 	return HandPose.getPose(name);
 }
 
-function setPose(name, pose) {
+/**
+ * Get a pose from the registry
+ * @param {string} name of the pose to set
+ * @param {Float32Array} pose Array buffer with the information about the current pose
+ * @returns {Promise<void>} Resolves once the pose has been uploaded to the worker
+ */
+export function setPose(name, pose) {
 	return HandPose.setPose(name, pose);
 }
 
@@ -63,16 +86,30 @@ class HandInfo {
 }
 const hands = new Map();
 
-function resetHands() {
+/**
+ * Reset the current tracking performed automatically when the device returns from sleep
+ */
+export function resetHands() {
 	hands.clear();
 }
 
 let __dumphands = false;
-function dumpHands() {
+
+/**
+ * On the next frame save the current hand pose to a file
+ */
+export function dumpHands() {
 	__dumphands = true;	
 }
 
-function handDataToFile(inputSources, referenceSpace, frame) {
+/**
+ * Get a pose from the current hand position
+ * @param {XRInputSource} inputSources Array of inputs you want to generate inputs for, requires a left AND right hand
+ * @param {XRReferenceSpace} referenceSpace Current reference space
+ * @param {XRFrame} frame Current active frame
+ * @returns {void|Float32Array} The generated pose buffer for the pose.
+ */
+export function generatePose(inputSources, referenceSpace, frame) {
 	const tempHands = {};
 
 	for (const source of inputSources) {
@@ -103,25 +140,28 @@ function handDataToFile(inputSources, referenceSpace, frame) {
 		normalize(leftHandAccessor);
 		normalize(rightHandAccessor);
 
-		console.log(outData);
-
-		const a = window.document.createElement('a');
-
-		a.href = window.URL.createObjectURL(
-			new Blob(
-				[new Uint8Array(outData.buffer)],
-				{ type: 'application/octet-stream' }
-			)
-		);
-		a.download = 'untitled.handpose';
-		
-		// Append anchor to body.
-		document.body.appendChild(a);
-		a.click();
-		
-		// Remove anchor from body
-		document.body.removeChild(a);
+		return outData;
 	}
+}
+
+function bufferToFile(outData) {
+
+	const a = window.document.createElement('a');
+
+	a.href = window.URL.createObjectURL(
+		new Blob(
+			[new Uint8Array(outData.buffer)],
+			{ type: 'application/octet-stream' }
+		)
+	);
+	a.download = 'untitled.handpose';
+	
+	// Append anchor to body.
+	document.body.appendChild(a);
+	a.click();
+	
+	// Remove anchor from body
+	document.body.removeChild(a);
 }
 
 
@@ -151,7 +191,14 @@ function init(session) {
 	session.addEventListener('inputsourceschange', resetHands);
 }
 
-function update(inputSources, referenceSpace, frame, callback) {
+/**
+ * 
+ * @param {Array<XRInputSource>} inputSources The inputs you want to do pose tracking for
+ * @param {XRReferenceSpace} referenceSpace The reference space for your scene
+ * @param {XRFrame} frame The current active frame
+ * @param {function} callback This gets called with an Array of Arrays with the poses and their distances
+ */
+export function update(inputSources, referenceSpace, frame, callback) {
 
 	if (inputSources && frame) {
 
@@ -160,7 +207,10 @@ function update(inputSources, referenceSpace, frame, callback) {
 		}
 
 		if (__dumphands) {
-			handDataToFile(inputSources, referenceSpace, frame);
+			const pose = generatePose(inputSources, referenceSpace, frame);
+			if (pose) {
+				bufferToFile(pose);
+			}
 		}
 
 		const xrViewerPose = frame.getViewerPose(referenceSpace);
@@ -196,15 +246,3 @@ function update(inputSources, referenceSpace, frame, callback) {
 		}
 	}
 }
-
-export {
-	update,
-	resetHands,
-	dumpHands,
-	handPoses,
-	loadPose,
-	normalize,
-	handDataToFile,
-	getPose,
-	setPose
-};
