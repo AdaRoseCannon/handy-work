@@ -113,7 +113,7 @@ Example use case:
 
 ```html
 <!-- After the AFrame script -->
-<script src="https://cdn.jsdelivr.net/npm/handy-work@1.4.0/build/handy-controls.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handy-work/build/handy-controls.min.js"></script>
 
 <!-- In your camera rig -->
 <a-entity handy-controls="right:#right-gltf;materialOverride:right;" material="color:gold;metalness:1;roughness:0;">
