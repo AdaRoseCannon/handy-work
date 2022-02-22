@@ -1,8 +1,12 @@
-# handy Work
+# Handy Work
 
 A module for doing efficient real-time pose detection from WebXR Hand Tracking using Web Workers to ensure it doesn't interfere with the main thread
 
+The pose tracking module is Framework Agnostic, it doesn't rely on any particular library it should work just as well with THREE as BabylonJS or Play Canvas. 
+
 Poses can be found in the `/poses/` folder and additional poses are welcome 
+
+There is also an AFrame module which handles pose tracking and displaying hand models.
 
 ## Module Usage Example
 
