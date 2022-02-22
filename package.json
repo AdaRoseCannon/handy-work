@@ -1,7 +1,8 @@
 {
   "name": "handy-work",
   "version": "1.4.0",
-  "description": "Use a Web Worker for asynchronous hand pose detection.",
+  "description": "Web Worker enabled hand-pose tracking for WebXR.",
+  "repository": "https://github.com/AdaRoseCannon/handy-work",
   "main": "build/cjs/handy-work.standalone.js",
   "module": "src/handy-work.js",
   "scripts": {
