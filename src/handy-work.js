@@ -108,7 +108,7 @@ export function dumpHands() {
  * @param {XRFrame} frame Current active frame
  * @returns {void|Float32Array} The generated pose buffer for the pose.
  */
-export function generatePose(inputSources, referenceSpace, frame) {
+export function generatePose(inputSources, referenceSpace, frame, float32Array) {
 	const tempHands = {};
 
 	for (const source of inputSources) {
@@ -116,16 +116,19 @@ export function generatePose(inputSources, referenceSpace, frame) {
 		tempHands[source.handedness] = source.hand;
 	}
 	if (tempHands.left && tempHands.right) {
-		__dumphands = false;
 
 		const size = tempHands.left.size;
-		const outData = new Float32Array(
+		const bufferSize = 
 			1 +         // store size
 			size * 16 + // left hand
 			size * 16 + // right hand
 			size +      // weighting for individual joints left hand
 			size        // weighting for individual joints right hand
-		);
+
+		if (float32Array.byteLength < bufferSize * 4) {
+			throw Error(`Provided buffer too small it needs to be a float32 and the size needs to be ${bufferSize} (${bufferSize * 4} bytes)`)
+		}
+		const outData = float32Array || new Float32Array(bufferSize);
 
 		outData[0] = size;
 		const leftHandAccessor = new Float32Array(outData.buffer, 4, size * 16);
@@ -208,6 +211,7 @@ export function update(inputSources, referenceSpace, frame, callback) {
 		if (__dumphands) {
 			const pose = generatePose(inputSources, referenceSpace, frame);
 			if (pose) {
+				__dumphands = false;
 				bufferToFile(pose);
 			}
 		}
