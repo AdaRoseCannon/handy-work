@@ -1,5 +1,15 @@
 import tablemark from "tablemark";
 const myArgs = process.argv.slice(2);
+
+const handler = {
+	get(target, prop, receiver) {
+		return function () {
+			console.log(prop);
+		};
+	}
+};
+
+global.THREE = new Proxy({}, handler);
 global.AFRAME= {
 	registerComponent: function (name, details) {
 		const table = [];

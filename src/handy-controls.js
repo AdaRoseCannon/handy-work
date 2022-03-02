@@ -1,7 +1,10 @@
 /* global AFRAME, THREE */
 
+import { XRControllerModelFactory } from './lib/XRControllerModelFactory.js';
+
 const __version__ = __version__;
-const DEFAULT_HAND_PROFILE_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/";
+const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/";
+const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "generic-hand/";
 const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + (__version__ ? '@' + __version__ : '');
 const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
 const POSE_FOLDER = LIB_URL + "/poses/";
@@ -75,11 +78,12 @@ AFRAME.registerComponent("handy-controls", {
       this.el.sceneEl.setAttribute('webxr', webxrData);
     }
     
+    this.loader = new THREE.GLTFLoader();
     const self = this;
     const dracoLoader = this.el.sceneEl.systems['gltf-model'].getDRACOLoader();
     const meshoptDecoder = this.el.sceneEl.systems['gltf-model'].getMeshoptDecoder();
+    this.controllerModelFactory = new XRControllerModelFactory(this.loader);
     this.model = null;
-    this.loader = new THREE.GLTFLoader();
     if (dracoLoader) {
       this.loader.setDRACOLoader(dracoLoader);
     }
@@ -191,34 +195,55 @@ AFRAME.registerComponent("handy-controls", {
     return bones;
   },
 
-  async update() {
+  async update(oldData) {
     const el = this.el;
     const srcLeft = this.data.left;
     const srcRight = this.data.right;
 
-    this.remove();
-    try {
-      this.bonesRight = await this.gltfToJoints(srcRight, "right");
-      this.bonesLeft = await this.gltfToJoints(srcLeft, "left");
-    } catch (error) {
-      const message = error && error.message ? error.message : "Failed to load glTF model";
-      console.warn(message);
-      el.emit("hand-model-error", { message });
+    // Only reload models if they changed
+    if (oldData.left !== this.data.left || oldData.right !== this.data.right) {
+      this.remove();
+      try {
+        this.bonesRight = await this.gltfToJoints(srcRight, "right");
+        this.bonesLeft = await this.gltfToJoints(srcLeft, "left");
+      } catch (error) {
+        const message = error && error.message ? error.message : "Failed to load glTF model";
+        console.warn(message);
+        el.emit("hand-model-error", { message });
+      }
     }
   },
+
+  getControllerModel(index, inputSource) {
+    const object = this.el.getObject3D('controller-model-' + inputSource.handedness);
+    if (object) {
+      return object;
+    } else {
+      const renderer = this.el.sceneEl.renderer;
+      const group = renderer.xr.getControllerGrip(index);
+      const model = this.controllerModelFactory.createControllerModel(group);
+      group.add(model);
+      this.el.setObject3D('controller-model-' + inputSource.handedness, group);
+      return group;
+    }
+  },
+
   tick() {
     const session = this.el.sceneEl.xrSession;
     if (!session) return;
-    const referenceSpace = this.el.sceneEl.renderer.xr.getReferenceSpace();
+    const renderer = this.el.sceneEl.renderer;
+    const referenceSpace = renderer.xr.getReferenceSpace();
     const toUpdate = [];
     const frame = this.el.sceneEl.frame;
     
+    let i=-1;
     inputSourceLoop:
     for (const inputSource of session.inputSources) {
-      
+      i++;
       const magnetEl = this.el.querySelector(`[data-magnet][data-${inputSource.handedness}]`);
       let magnetTarget = null;
       let fadeT = 1;
+      let bones = [];
       
       const currentMesh = this.el.getObject3D("hand-mesh-" + inputSource.handedness);
       if (!currentMesh) return;
@@ -238,49 +263,66 @@ AFRAME.registerComponent("handy-controls", {
           el.object3D.visible = false;
         }
         currentMesh.visible = false;
-        continue;
-      }
-      toUpdate.push(inputSource);
 
-      const bones =
-        (inputSource.handedness === "right" && this.bonesRight) ||
-        (inputSource.handedness === "left" && this.bonesLeft);
-      if (!bones) continue;
-      for (const bone of bones) {
-        const joint = inputSource.hand.get(bone.jointName);
-        if (joint) {
-          const pose = frame.getJointPose(joint, referenceSpace);
+        const model = this.getControllerModel(i, inputSource);
+        model.visible = true;
+
+        if (elMap.has('grip') && inputSource.gripSpace) {
+          const pose = frame.getPose(inputSource.gripSpace, referenceSpace);
           if (pose) {
-            currentMesh.visible = true;
-            if (elMap.has(bone.jointName)) {
-              for (const el of elMap.get(bone.jointName)) {
-                el.object3D.position.copy(pose.transform.position);
-                el.object3D.quaternion.copy(pose.transform.orientation);
-                el.object3D.visible = (el.getDOMAttribute('visible') !== false);
-              }
+            for (const el of elMap.get('grip')) {
+              el.object3D.position.copy(pose.transform.position);
+              el.object3D.quaternion.copy(pose.transform.orientation);
+              el.object3D.visible = (el.getDOMAttribute('visible') !== false);
             }
-            
-            if (bone.jointName === "middle-finger-metacarpal") {
-              if (elMap.has('grip')) {
-                for (const el of elMap.get('grip')) {
+          }
+        }
+      } else {
+        toUpdate.push(inputSource);
+        const controllerModel = this.el.getObject3D('controller-model-' + inputSource.handedness);
+        if (controllerModel) controllerModel.visible = false;
+  
+        bones =
+          (inputSource.handedness === "right" && this.bonesRight) ||
+          (inputSource.handedness === "left" && this.bonesLeft);
+        if (!bones.length) continue;
+        for (const bone of bones) {
+          const joint = inputSource.hand.get(bone.jointName);
+          if (joint) {
+            const pose = frame.getJointPose(joint, referenceSpace);
+            if (pose) {
+              currentMesh.visible = true;
+              if (elMap.has(bone.jointName)) {
+                for (const el of elMap.get(bone.jointName)) {
+                  el.object3D.position.copy(pose.transform.position);
                   el.object3D.quaternion.copy(pose.transform.orientation);
-                  this.gripQuaternions[inputSource.handedness].forEach(q => el.object3D.quaternion.multiply(q));
-                  el.object3D.position.copy(this.gripOffset[inputSource.handedness]);
-                  el.object3D.position.applyQuaternion(el.object3D.quaternion);
-                  el.object3D.position.add(pose.transform.position);
                   el.object3D.visible = (el.getDOMAttribute('visible') !== false);
                 }
               }
+              
+              if (bone.jointName === "middle-finger-metacarpal") {
+                if (elMap.has('grip')) {
+                  for (const el of elMap.get('grip')) {
+                    el.object3D.quaternion.copy(pose.transform.orientation);
+                    this.gripQuaternions[inputSource.handedness].forEach(q => el.object3D.quaternion.multiply(q));
+                    el.object3D.position.copy(this.gripOffset[inputSource.handedness]);
+                    el.object3D.position.applyQuaternion(el.object3D.quaternion);
+                    el.object3D.position.add(pose.transform.position);
+                    el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+                  }
+                }
+              }
+              
+              bone.position.copy(pose.transform.position);
+              bone.quaternion.copy(pose.transform.orientation);
+            } else {
+              // Failed to get hand pose so continue looping over other inputSource
+              continue inputSourceLoop;
             }
-            
-            bone.position.copy(pose.transform.position);
-            bone.quaternion.copy(pose.transform.orientation);
-          } else {
-            // Failed to get hand pose so continue looping over other inputSource
-            continue inputSourceLoop;
           }
         }
       }
+
       if (elMap.has('ray') && inputSource.targetRaySpace) {
         const pose = frame.getPose(inputSource.targetRaySpace, referenceSpace);
         if (pose) {
