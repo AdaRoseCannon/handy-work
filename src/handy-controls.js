@@ -2,10 +2,11 @@
 
 const __version__ = __version__;
 const DEFAULT_HAND_PROFILE_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/";
-const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work@" + __version__;
+const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + (__version__ ? '@' + __version__ : '');
 const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
 const POSE_FOLDER = LIB_URL + "/poses/";
-
+const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));
+const invlerp = (x, y, a) => clamp((a - x) / (y - x));
 const joints = [
   "wrist",
   "thumb-metacarpal",
@@ -120,15 +121,33 @@ AFRAME.registerComponent("handy-controls", {
       }
     }
     
-    this.gripOffset = new THREE.Vector3(-0.005, -0.03, 0);
-    this.gripQuaternions = [new THREE.Quaternion().setFromUnitVectors(
-      new THREE.Vector3(0,0,-1),
-      new THREE.Vector3(-3,0,-1).normalize()
-    ),new THREE.Quaternion().setFromUnitVectors(
-      new THREE.Vector3(0,1,0),
-      new THREE.Vector3(-1,0,0)
-    )];
-    
+    this.gripOffset = {
+      right: new THREE.Vector3(-0.005, -0.03, 0),
+      left: new THREE.Vector3(0.005, -0.03, 0)
+    };
+    this.gripQuaternions = {
+      right: [new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0,0,-1),
+        new THREE.Vector3(-1,0,0).normalize()
+      ),new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0,1,0),
+        new THREE.Vector3(-1,0,0)
+      )],
+      left: [new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0,0,1),
+        new THREE.Vector3(1,0,0).normalize()
+      ),new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(1,1,0),
+        new THREE.Vector3(-1,0,-1)
+      )]
+    };
+
+    this.tempVector3 = new THREE.Vector3();
+    this.tempVector3_A = new THREE.Vector3();
+    this.tempVector3_B = new THREE.Vector3();
+    this.tempQuaternion_A = new THREE.Quaternion();
+    this.tempQuaternion_B = new THREE.Quaternion();
+
   },
 
   async gltfToJoints(src, name) {
@@ -191,9 +210,10 @@ AFRAME.registerComponent("handy-controls", {
     const session = this.el.sceneEl.xrSession;
     if (!session) return;
     const referenceSpace = this.el.sceneEl.renderer.xr.getReferenceSpace();
-    
     const toUpdate = [];
     const frame = this.el.sceneEl.frame;
+    
+    inputSourceLoop:
     for (const inputSource of session.inputSources) {
       
       const currentMesh = this.el.getObject3D("hand-mesh-" + inputSource.handedness);
@@ -239,8 +259,8 @@ AFRAME.registerComponent("handy-controls", {
               if (elMap.has('grip')) {
                 for (const el of elMap.get('grip')) {
                   el.object3D.quaternion.copy(pose.transform.orientation);
-                  this.gripQuaternions.forEach(q => el.object3D.quaternion.multiply(q));
-                  el.object3D.position.copy(this.gripOffset);
+                  this.gripQuaternions[inputSource.handedness].forEach(q => el.object3D.quaternion.multiply(q));
+                  el.object3D.position.copy(this.gripOffset[inputSource.handedness]);
                   el.object3D.position.applyQuaternion(el.object3D.quaternion);
                   el.object3D.position.add(pose.transform.position);
                   el.object3D.visible = (el.getDOMAttribute('visible') !== false);
@@ -250,22 +270,12 @@ AFRAME.registerComponent("handy-controls", {
             
             bone.position.copy(pose.transform.position);
             bone.quaternion.copy(pose.transform.orientation);
-            bone.applyMatrix4(this.el.object3D.matrixWorld);
-            bone.updateMatrixWorld();
+          } else {
+            // Failed to get hand pose so continue looping over elements
+            continue inputSourceLoop;
           }
         }
       }
-      // Ideally we would do this but the grip space doesn't actually line up with where you hold something so I map it to the middle finger metacarpal isntead
-      // if (elMap.has('grip') && inputSource.gripSpace) {
-      //   const pose = frame.getPose(inputSource.gripSpace, referenceSpace);
-      //   if (pose) {
-      //     for (const el of elMap.get('grip')) {
-      //       el.object3D.position.copy(pose.transform.position);
-      //       el.object3D.quaternion.copy(pose.transform.orientation);
-      //       el.object3D.visible = (el.getDOMAttribute('visible') !== false);
-      //     }
-      //   }
-      // }
       if (elMap.has('ray') && inputSource.targetRaySpace) {
         const pose = frame.getPose(inputSource.targetRaySpace, referenceSpace);
         if (pose) {
@@ -274,6 +284,69 @@ AFRAME.registerComponent("handy-controls", {
             el.object3D.quaternion.copy(pose.transform.orientation);
             el.object3D.visible = (el.getDOMAttribute('visible') !== false);
           }
+        }
+      }
+      
+      let magnetEl = this.el.querySelector(`[data-magnet][data-${inputSource.handedness}]`);
+      let magnetTarget = null;
+      let fadeT = 1;
+      
+      if (magnetEl) {
+        magnetEl.object3D.updateWorldMatrix(true, false);
+        const magnetTargets = Array.from(document.querySelectorAll(magnetEl.dataset.magnet));
+        for (const el of magnetTargets) {
+          const [magnetRange,fadeEnd] = (el.dataset.magnetRange || "0.2,0.1").split(',').map(n => Number(n));
+          el.object3D.getWorldPosition(this.tempVector3);
+          magnetEl.object3D.worldToLocal(this.tempVector3);
+          // console.log(this.tempVector3.length().toFixed(2));
+          
+          const d = this.tempVector3.length();
+          if (d < magnetRange) {
+            magnetTarget = el;
+            
+            if (fadeEnd) {
+              fadeT = invlerp(magnetRange,fadeEnd,d);
+            } else {
+              fadeT = 1;
+            }
+            
+            break;
+          }
+        }
+      }
+      
+      if (magnetTarget) {
+        
+        //TODO: Handle fadeT
+        
+        magnetTarget.object3D.getWorldPosition(this.tempVector3_A);
+        magnetEl.object3D.getWorldPosition(this.tempVector3_B);
+        this.tempVector3_A.lerp(this.tempVector3_B, 1-fadeT).sub(this.tempVector3_B);
+        
+        magnetTarget.object3D.getWorldQuaternion(this.tempQuaternion_A);
+        magnetEl.object3D.getWorldQuaternion(this.tempQuaternion_B);
+        this.tempQuaternion_A.slerp(this.tempQuaternion_B, 1-fadeT).multiply(this.tempQuaternion_B.invert());
+        
+        for (const bone of bones) {
+          bone.position.sub(magnetEl.object3D.position);
+          bone.position.applyQuaternion(this.tempQuaternion_A);
+          bone.position.add(magnetEl.object3D.position);
+          bone.applyQuaternion(this.tempQuaternion_A);
+          bone.position.add(this.tempVector3_A);
+          bone.applyMatrix4(this.el.object3D.matrixWorld);
+          bone.updateMatrixWorld();
+        }
+        for (const el of els) {
+          el.object3D.position.sub(magnetEl.object3D.position);
+          el.object3D.position.applyQuaternion(this.tempQuaternion_A);
+          el.object3D.position.add(magnetEl.object3D.position);
+          el.object3D.applyQuaternion(this.tempQuaternion_A);
+          el.object3D.position.add(this.tempVector3_A);
+        }
+      } else {
+        for (const bone of bones) {
+          bone.applyMatrix4(this.el.object3D.matrixWorld);
+          bone.updateMatrixWorld();
         }
       }
     }

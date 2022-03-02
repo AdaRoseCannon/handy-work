@@ -109,6 +109,22 @@ rotation set to match the bones they are set to where the bone can be one of:
 * pinky-finger-phalanx-distal
 * pinky-finger-tip
 
+*Magnetic Actions*
+
+Add data-magnet set to a query selector for magnetic elements so that when the joint approaches
+that element the whole hand will get pulled towards it.
+
+Only set 1 `data-magnet` per hand. You can configure the magnetic elements by setting their data-magnet range e.g. `data-magnet-range="0.2,0.1"`. Where the first number is where the magnetism starts and the second the range at which the hand is totally moved to the destination location. In that example, which is the default it will start approaching from 0.2m and if the hand is within 0.1m it will be placed on the `#sword` handle.
+
+```html
+<!-- inside the handy-controls -->
+<a-entity data-right="grip" data-magnet="#sword"></a-entity>
+<a-entity data-left="grip" data-magnet="#sword"></a-entity>
+
+<!-- Elsewhere in the scene -->
+<a-gltf-model id="sword" src="#sword-gltf" data-magnet-range="0.2,0.1"></a-gltf-model>
+```
+
 Example use case:
 
 ```html
