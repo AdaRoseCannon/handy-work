@@ -216,12 +216,17 @@ AFRAME.registerComponent("handy-controls", {
     inputSourceLoop:
     for (const inputSource of session.inputSources) {
       
+      const magnetEl = this.el.querySelector(`[data-magnet][data-${inputSource.handedness}]`);
+      let magnetTarget = null;
+      let fadeT = 1;
+      
       const currentMesh = this.el.getObject3D("hand-mesh-" + inputSource.handedness);
       if (!currentMesh) return;
       
-      const els = Array.from(this.el.querySelectorAll(`[data-${inputSource.handedness}]`));
+      const allEls = Array.from(this.el.querySelectorAll(`[data-${inputSource.handedness}]`));
+
       const elMap = new Map();
-      for (const el of els) {
+      for (const el of allEls) {
         const poseName = el.dataset[inputSource.handedness];
         const elArray = elMap.get(poseName) || [];
         elArray.push(el);
@@ -229,7 +234,7 @@ AFRAME.registerComponent("handy-controls", {
       }
 
       if (!inputSource.hand) {
-        for (const el of els) {
+        for (const el of allEls) {
           el.object3D.visible = false;
         }
         currentMesh.visible = false;
@@ -271,7 +276,7 @@ AFRAME.registerComponent("handy-controls", {
             bone.position.copy(pose.transform.position);
             bone.quaternion.copy(pose.transform.orientation);
           } else {
-            // Failed to get hand pose so continue looping over elements
+            // Failed to get hand pose so continue looping over other inputSource
             continue inputSourceLoop;
           }
         }
@@ -287,10 +292,6 @@ AFRAME.registerComponent("handy-controls", {
         }
       }
       
-      let magnetEl = this.el.querySelector(`[data-magnet][data-${inputSource.handedness}]`);
-      let magnetTarget = null;
-      let fadeT = 1;
-      
       if (magnetEl) {
         magnetEl.object3D.updateWorldMatrix(true, false);
         const magnetTargets = Array.from(document.querySelectorAll(magnetEl.dataset.magnet));
@@ -298,7 +299,6 @@ AFRAME.registerComponent("handy-controls", {
           const [magnetRange,fadeEnd] = (el.dataset.magnetRange || "0.2,0.1").split(',').map(n => Number(n));
           el.object3D.getWorldPosition(this.tempVector3);
           magnetEl.object3D.worldToLocal(this.tempVector3);
-          // console.log(this.tempVector3.length().toFixed(2));
           
           const d = this.tempVector3.length();
           if (d < magnetRange) {
@@ -317,8 +317,6 @@ AFRAME.registerComponent("handy-controls", {
       
       if (magnetTarget) {
         
-        //TODO: Handle fadeT
-        
         magnetTarget.object3D.getWorldPosition(this.tempVector3_A);
         magnetEl.object3D.getWorldPosition(this.tempVector3_B);
         this.tempVector3_A.lerp(this.tempVector3_B, 1-fadeT).sub(this.tempVector3_B);
@@ -336,7 +334,9 @@ AFRAME.registerComponent("handy-controls", {
           bone.applyMatrix4(this.el.object3D.matrixWorld);
           bone.updateMatrixWorld();
         }
-        for (const el of els) {
+
+        // Move elements to match the bones but skil elements which are marked data-no-magnet
+        for (const el of allEls.filter(el => el.dataset.noMagnet === undefined)) {
           el.object3D.position.sub(magnetEl.object3D.position);
           el.object3D.position.applyQuaternion(this.tempQuaternion_A);
           el.object3D.position.add(magnetEl.object3D.position);
@@ -372,9 +372,6 @@ AFRAME.registerComponent("handy-controls", {
 	},
   emit(name, handedness, details) {
     if (name === this[handedness + '_currentPose']) return;
-    
-    // console.log(`Old pose was ${this[handedness + '_currentPose']} current pose is ${name}, so resetting events`);
-    
     const els = Array.from(this.el.querySelectorAll(`[data-${handedness}]`));
     
     clearTimeout(this[handedness + '_vshortTimeout']);

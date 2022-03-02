@@ -116,6 +116,8 @@ that element the whole hand will get pulled towards it.
 
 Only set 1 `data-magnet` per hand. You can configure the magnetic elements by setting their data-magnet range e.g. `data-magnet-range="0.2,0.1"`. Where the first number is where the magnetism starts and the second the range at which the hand is totally moved to the destination location. In that example, which is the default it will start approaching from 0.2m and if the hand is within 0.1m it will be placed on the `#sword` handle.
 
+For physics systems it probably won't work well when you use magnet elements you probably want to use the real joint location, do declare that a joint should ignore magnet effects add `data-no-magnet` to it.
+
 ```html
 <!-- inside the handy-controls -->
 <a-entity data-right="grip" data-magnet="#sword"></a-entity>
