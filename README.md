@@ -72,15 +72,15 @@ Vector3
 Vector3
 Quaternion
 Quaternion
-| Property         | Default                                                                                            | Description                                                                | Type    |
-| :--------------- | :------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------- | :------ |
-| renderGamepad    | true                                                                                               | Whether to render a gamepad model when it's not doing hand tracking        | boolean |
-| left             | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/left.glb  | URL for left controller                                                    | model   |
-| right            | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/right.glb | URL for right controller                                                   | model   |
-| materialOverride | both                                                                                               | Which hand to use the `material` component for One of both,left,right,none | string  |
-| fuseVShort       | 48                                                                                                 | Time for a pose to trigger a pose event (ms)                               | number  |
-| fuseShort        | 480                                                                                                | Time for a pose to trigger a pose_fuseShort event (ms)                     | number  |
-| fuseLong         | 1440                                                                                               | Time for a pose to trigger a pose_fuseLong event (ms)                      | number  |
+| Property         | Default                                                                                        | Description                                                                | Type    |
+| :--------------- | :--------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------- | :------ |
+| renderGamepad    | true                                                                                           | Whether to render a gamepad model when it's not doing hand tracking        | boolean |
+| left             | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles/generic-hand/left.glb  | URL for left controller                                                    | model   |
+| right            | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles/generic-hand/right.glb | URL for right controller                                                   | model   |
+| materialOverride | both                                                                                           | Which hand to use the `material` component for One of both,left,right,none | string  |
+| fuseVShort       | 48                                                                                             | Time for a pose to trigger a pose event (ms)                               | number  |
+| fuseShort        | 480                                                                                            | Time for a pose to trigger a pose_fuseShort event (ms)                     | number  |
+| fuseLong         | 1440                                                                                           | Time for a pose to trigger a pose_fuseLong event (ms)                      | number  |
 
 <!--SCHEMA_END-->
 

@@ -3,14 +3,15 @@
 import { XRControllerModelFactory } from './lib/XRControllerModelFactory.js';
 
 const __version__ = __version__;
-const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/";
-const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "generic-hand/";
+const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles";
+const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "/generic-hand";
 const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + (__version__ ? '@' + __version__ : '');
 const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
 const POSE_FOLDER = LIB_URL + "/poses/";
 const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));
 const invlerp = (x, y, a) => clamp((a - x) / (y - x));
 const prevGamePads = new Map();
+const changedAxes = new Set();
 
 const tempVector3 = new THREE.Vector3();
 const tempVector3_A = new THREE.Vector3();
@@ -62,12 +63,12 @@ AFRAME.registerComponent("handy-controls", {
     left: {
       description: 'URL for left controller',
       type: 'model',
-      default: DEFAULT_HAND_PROFILE_PATH + "left.glb",
+      default: DEFAULT_HAND_PROFILE_PATH + "/left.glb",
     },
     right: {
       description: 'URL for right controller',
       type: 'model',
-      default: DEFAULT_HAND_PROFILE_PATH + "right.glb",
+      default: DEFAULT_HAND_PROFILE_PATH + "/right.glb",
     },
     materialOverride: {
       description: 'Which hand to use the `material` component for',
@@ -101,7 +102,7 @@ AFRAME.registerComponent("handy-controls", {
     const self = this;
     const dracoLoader = this.el.sceneEl.systems['gltf-model'].getDRACOLoader();
     const meshoptDecoder = this.el.sceneEl.systems['gltf-model'].getMeshoptDecoder();
-    this.controllerModelFactory = new XRControllerModelFactory(this.loader);
+    this.controllerModelFactory = new XRControllerModelFactory(this.loader, DEFAULT_PROFILES_PATH);
     this.model = null;
     if (dracoLoader) {
       this.loader.setDRACOLoader(dracoLoader);
@@ -265,6 +266,7 @@ AFRAME.registerComponent("handy-controls", {
       let magnetTarget = null;
       let fadeT = 1;
       let bones = [];
+      const toMagnet = [];
       let controllerModel;
       
       const currentMesh = this.el.getObject3D("hand-mesh-" + inputSource.handedness);
@@ -295,48 +297,71 @@ AFRAME.registerComponent("handy-controls", {
             if (pose) {
               controllerModel.position.copy(pose.transform.position);
               controllerModel.quaternion.copy(pose.transform.orientation);
+              toMagnet.push(controllerModel);
               if (elMap.has('grip')) for (const el of elMap.get('grip')) {
                 el.object3D.position.copy(pose.transform.position);
                 el.object3D.quaternion.copy(pose.transform.orientation);
                 el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+                if (el.dataset.noMagnet === undefined) toMagnet.push(el.object3D);
               }
             }
           }
-        }
 
-        // if it has a game pad fire events for gamepad changes
-        if (inputSource.gamepad) {
-          const old = prevGamePads.get(inputSource);
-          const data = {
-            buttons: inputSource.gamepad.buttons.map(b => b.value),
-            axes: inputSource.gamepad.axes.slice(0)
-          };
-          if (old) {
-            data.buttons.forEach((value,i)=>{
-              if (value !== old.buttons[i]) {
-                if (value === 1) {
-                  this.emitGamepad(allEls, `button${i}Down`, {value, handedness: inputSource.handedness, inputSource, data});
-                } else {
-                  this.emitGamepad(allEls, `button${i}Up`, {value, handedness: inputSource.handedness, inputSource, data});
+          // if it has a gamepad fire events for gamepad changes
+          if (inputSource.gamepad) {
+            const old = prevGamePads.get(inputSource);
+            const data = {
+              buttons: inputSource.gamepad.buttons.map(b => b.value),
+              axes: inputSource.gamepad.axes.slice(0)
+            };
+            if (old) {
+              const eventDetails = {handedness: inputSource.handedness, inputSource, data}
+              data.buttons.forEach((value,i)=>{
+                if (value !== old.buttons[i]) {
+                  let name = controllerModel.gamepadMappings?.buttons[i] || `button${i}`;
+                  if (value === 1) {
+                    this.emitGamepad(allEls, `${name}down`, Object.assign({value}, eventDetails));
+                  } else {
+                    this.emitGamepad(allEls, `${name}up`, Object.assign({value}, eventDetails));
+                  }
                 }
+              });
+              const axesMapping = controllerModel.gamepadMappings?.axes;
+              if (axesMapping && axesMapping.length) {
+                // There are some named axis so try to combine them together
+                changedAxes.clear();
+                const details =  {};
+                axesMapping.forEach(({name}, i)=>{
+                  if (name) {
+                    const value = data.axes[i];
+                    if (value !== old.axes[i]) {
+                      changedAxes.add(name);
+                    }
+                  }
+                });
+                if (changedAxes.size) {
+                  axesMapping.forEach(({name, type}, i)=>{
+                    if (name && changedAxes.has(name)) {
+                      const value = data.axes[i];
+                      details[name] =  details[name] || {};
+                      details[name][type.slice(0,1)] = value;
+                    }
+                  });
+                  for (const [name, detail] of Object.entries(details)) {
+                    this.emitGamepad(allEls, `${name}moved`, Object.assign(detail, eventDetails));
+                  }
+                }
+              } else {
+                data.axes.forEach((value,i)=>{
+                  let name = controllerModel.gamepadMappings?.axes[i] || `axes${i}`;
+                  if (value !== old.axes[i]) {
+                    this.emitGamepad(allEls, `${name}changed`, Object.assign({value}, eventDetails));
+                  }
+                });
               }
-            });
-            data.axes.forEach((value,i)=>{
-              if (value !== old.axes[i]) {
-                this.emitGamepad(allEls, `axes${i}Move`, {value, handedness: inputSource.handedness, inputSource, data});
-                if (old.axes[i] === 0) {
-                  this.emitGamepad(allEls, `axes${i}MoveStart`, {value, handedness: inputSource.handedness, inputSource, data});
-                }
-                if (Math.abs(old.axes[i]) < 0.5 && Math.abs(value) > 0.5) {
-                  this.emitGamepad(allEls, `axes${i}MoveMiddle`, {value, handedness: inputSource.handedness, inputSource,data});
-                }
-                if (value === 0) {
-                  this.emitGamepad(allEls, `axes${i}MoveEnd`, {value, handedness: inputSource.handedness, inputSource,data});
-                }
-              }
-            });
+            }
+            prevGamePads.set(inputSource, data);
           }
-          prevGamePads.set(inputSource, data);
         }
       } else {
         toUpdate.push(inputSource);
@@ -358,6 +383,7 @@ AFRAME.registerComponent("handy-controls", {
                   el.object3D.position.copy(pose.transform.position);
                   el.object3D.quaternion.copy(pose.transform.orientation);
                   el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+                  if (el.dataset.noMagnet === undefined) toMagnet.push(el.object3D);
                 }
               }
               
@@ -370,6 +396,7 @@ AFRAME.registerComponent("handy-controls", {
                     el.object3D.position.applyQuaternion(el.object3D.quaternion);
                     el.object3D.position.add(pose.transform.position);
                     el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+                    if (el.dataset.noMagnet === undefined) toMagnet.push(el.object3D);
                   }
                 }
               }
@@ -391,6 +418,7 @@ AFRAME.registerComponent("handy-controls", {
             el.object3D.position.copy(pose.transform.position);
             el.object3D.quaternion.copy(pose.transform.orientation);
             el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+            if (el.dataset.noMagnet === undefined) toMagnet.push(el.object3D);
           }
         }
       }
@@ -437,12 +465,8 @@ AFRAME.registerComponent("handy-controls", {
         }
 
         // Move elements to match the bones but skil elements which are marked data-no-magnet
-        for (const el of allEls.filter(el => el.dataset.noMagnet === undefined)) {
-          moveAroundAndTranslate(el.object3D, tempVector3_B, tempQuaternion_A, tempVector3_A);
-        }
-
-        if (controllerModel) {
-          moveAroundAndTranslate(controllerModel, tempVector3_B, tempQuaternion_A, tempVector3_A);
+        for (const object3D of toMagnet) {
+          moveAroundAndTranslate(object3D, tempVector3_B, tempQuaternion_A, tempVector3_A);
         }
       } else {
         for (const bone of bones) {
@@ -473,11 +497,11 @@ AFRAME.registerComponent("handy-controls", {
 	},
   emitGamepad (els, name, details) {
     details.event = name;
-    this.el.emit('gamepad_' + name, details);
+    this.el.emit(name, details);
     this.el.emit('gamepad', details);
 
     for (const el of els) {
-      el.emit('gamepad_' + name, details, false);
+      el.emit(name, details, false);
       el.emit('gamepad', details, false);
     }
   },

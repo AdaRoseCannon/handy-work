@@ -12,7 +12,7 @@ import {
 	MotionController
 } from 'three/examples/jsm/libs/motion-controllers.module.js';
 
-const DEFAULT_PROFILES_PATH = 'https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles';
+const DEFAULT_PROFILES_PATH = 'https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles';
 const DEFAULT_PROFILE = 'generic-trigger';
 
 class XRControllerModel extends Object3D {
@@ -205,10 +205,10 @@ function addAssetSceneToControllerModel( controllerModel, scene ) {
 
 class XRControllerModelFactory {
 
-	constructor( gltfLoader ) {
+	constructor( gltfLoader, path ) {
 
 		this.gltfLoader = gltfLoader;
-		this.path = DEFAULT_PROFILES_PATH;
+		this.path = path || DEFAULT_PROFILES_PATH;
 		this._assetCache = {};
 
 	}
@@ -231,6 +231,24 @@ class XRControllerModelFactory {
 					profile,
 					assetPath
 				);
+
+				const buttons = [];
+				const axes = [];
+				const gamepadMappings = { buttons, axes };
+				controllerModel.gamepadMappings = gamepadMappings;
+
+				if (controllerModel.motionController.layoutDescription?.components) {
+					for (let [name, details] of Object.entries(controllerModel.motionController.layoutDescription.components)) {
+						name = name.replace('xr-standard-', '');
+						for (const [type, index] of Object.entries(details.gamepadIndices)) {
+							if (type === 'button') {
+								buttons[index] = name;
+							} else {
+								axes[index] = {name,type};
+							}
+						}
+					}
+				}
 
 				const cachedAsset = this._assetCache[ controllerModel.motionController.assetUrl ];
 				if ( cachedAsset ) {
