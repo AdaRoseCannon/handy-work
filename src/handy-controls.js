@@ -10,6 +10,21 @@ const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
 const POSE_FOLDER = LIB_URL + "/poses/";
 const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));
 const invlerp = (x, y, a) => clamp((a - x) / (y - x));
+const prevGamePads = new Map();
+
+const tempVector3 = new THREE.Vector3();
+const tempVector3_A = new THREE.Vector3();
+const tempVector3_B = new THREE.Vector3();
+const tempQuaternion_A = new THREE.Quaternion();
+const tempQuaternion_B = new THREE.Quaternion();
+
+function moveAroundAndTranslate(object3D, center, quaternion, translate) {
+  object3D.position.sub(center);
+  object3D.position.applyQuaternion(quaternion);
+  object3D.position.add(center);
+  object3D.applyQuaternion(quaternion);
+  object3D.position.add(translate);
+}
 const joints = [
   "wrist",
   "thumb-metacarpal",
@@ -40,6 +55,10 @@ const joints = [
 
 AFRAME.registerComponent("handy-controls", {
   schema: {
+    renderGamepad: {
+      default: true,
+      description: `Whether to render a gamepad model when it's not doing hand tracking`
+    },
     left: {
       description: 'URL for left controller',
       type: 'model',
@@ -145,13 +164,6 @@ AFRAME.registerComponent("handy-controls", {
         new THREE.Vector3(-1,0,-1)
       )]
     };
-
-    this.tempVector3 = new THREE.Vector3();
-    this.tempVector3_A = new THREE.Vector3();
-    this.tempVector3_B = new THREE.Vector3();
-    this.tempQuaternion_A = new THREE.Quaternion();
-    this.tempQuaternion_B = new THREE.Quaternion();
-
   },
 
   async gltfToJoints(src, name) {
@@ -201,8 +213,14 @@ AFRAME.registerComponent("handy-controls", {
     const srcRight = this.data.right;
 
     // Only reload models if they changed
-    if (oldData.left !== this.data.left || oldData.right !== this.data.right) {
+    if (
+      oldData.left !== this.data.left ||
+      oldData.right !== this.data.right ||
+      oldData.renderGamepad !== this.data.renderGamepad
+    ) {
       this.remove();
+    }
+    if (oldData.left !== this.data.left || oldData.right !== this.data.right) {
       try {
         this.bonesRight = await this.gltfToJoints(srcRight, "right");
         this.bonesLeft = await this.gltfToJoints(srcLeft, "left");
@@ -222,9 +240,12 @@ AFRAME.registerComponent("handy-controls", {
       const renderer = this.el.sceneEl.renderer;
       const group = renderer.xr.getControllerGrip(index);
       const model = this.controllerModelFactory.createControllerModel(group);
-      group.add(model);
-      this.el.setObject3D('controller-model-' + inputSource.handedness, group);
-      return group;
+      group.dispatchEvent({
+        type: 'connected',
+        data: inputSource
+      });
+      this.el.setObject3D('controller-model-' + inputSource.handedness, model);
+      return model;
     }
   },
 
@@ -244,6 +265,7 @@ AFRAME.registerComponent("handy-controls", {
       let magnetTarget = null;
       let fadeT = 1;
       let bones = [];
+      let controllerModel;
       
       const currentMesh = this.el.getObject3D("hand-mesh-" + inputSource.handedness);
       if (!currentMesh) return;
@@ -264,18 +286,57 @@ AFRAME.registerComponent("handy-controls", {
         }
         currentMesh.visible = false;
 
-        const model = this.getControllerModel(i, inputSource);
-        model.visible = true;
+        if (this.data.renderGamepad) {
+          controllerModel = this.getControllerModel(i, inputSource);
+          controllerModel.visible = true;
 
-        if (elMap.has('grip') && inputSource.gripSpace) {
-          const pose = frame.getPose(inputSource.gripSpace, referenceSpace);
-          if (pose) {
-            for (const el of elMap.get('grip')) {
-              el.object3D.position.copy(pose.transform.position);
-              el.object3D.quaternion.copy(pose.transform.orientation);
-              el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+          if (inputSource.gripSpace) {
+            const pose = frame.getPose(inputSource.gripSpace, referenceSpace);
+            if (pose) {
+              controllerModel.position.copy(pose.transform.position);
+              controllerModel.quaternion.copy(pose.transform.orientation);
+              if (elMap.has('grip')) for (const el of elMap.get('grip')) {
+                el.object3D.position.copy(pose.transform.position);
+                el.object3D.quaternion.copy(pose.transform.orientation);
+                el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+              }
             }
           }
+        }
+
+        // if it has a game pad fire events for gamepad changes
+        if (inputSource.gamepad) {
+          const old = prevGamePads.get(inputSource);
+          const data = {
+            buttons: inputSource.gamepad.buttons.map(b => b.value),
+            axes: inputSource.gamepad.axes.slice(0)
+          };
+          if (old) {
+            data.buttons.forEach((value,i)=>{
+              if (value !== old.buttons[i]) {
+                if (value === 1) {
+                  this.emitGamepad(allEls, `button${i}Down`, {value, handedness: inputSource.handedness, inputSource, data});
+                } else {
+                  this.emitGamepad(allEls, `button${i}Up`, {value, handedness: inputSource.handedness, inputSource, data});
+                }
+              }
+            });
+            data.axes.forEach((value,i)=>{
+              if (value !== old.axes[i]) {
+                this.emitGamepad(allEls, `axes${i}Move`, {value, handedness: inputSource.handedness, inputSource, data});
+                if (old.axes[i] === 0) {
+                  this.emitGamepad(allEls, `axes${i}MoveStart`, {value, handedness: inputSource.handedness, inputSource, data});
+                }
+                if (Math.abs(old.axes[i]) < 0.5 && Math.abs(value) > 0.5) {
+                  this.emitGamepad(allEls, `axes${i}MoveMiddle`, {value, handedness: inputSource.handedness, inputSource,data});
+                }
+                if (value === 0) {
+                  this.emitGamepad(allEls, `axes${i}MoveEnd`, {value, handedness: inputSource.handedness, inputSource,data});
+                }
+              }
+            });
+          }
+          prevGamePads.set(inputSource, data);
         }
       } else {
         toUpdate.push(inputSource);
@@ -339,10 +400,10 @@ AFRAME.registerComponent("handy-controls", {
         const magnetTargets = Array.from(document.querySelectorAll(magnetEl.dataset.magnet));
         for (const el of magnetTargets) {
           const [magnetRange,fadeEnd] = (el.dataset.magnetRange || "0.2,0.1").split(',').map(n => Number(n));
-          el.object3D.getWorldPosition(this.tempVector3);
-          magnetEl.object3D.worldToLocal(this.tempVector3);
+          el.object3D.getWorldPosition(tempVector3);
+          magnetEl.object3D.worldToLocal(tempVector3);
           
-          const d = this.tempVector3.length();
+          const d = tempVector3.length();
           if (d < magnetRange) {
             magnetTarget = el;
             
@@ -359,31 +420,29 @@ AFRAME.registerComponent("handy-controls", {
       
       if (magnetTarget) {
         
-        magnetTarget.object3D.getWorldPosition(this.tempVector3_A);
-        magnetEl.object3D.getWorldPosition(this.tempVector3_B);
-        this.tempVector3_A.lerp(this.tempVector3_B, 1-fadeT).sub(this.tempVector3_B);
+        magnetTarget.object3D.getWorldPosition(tempVector3_A);
+        magnetEl.object3D.getWorldPosition(tempVector3_B);
+        tempVector3_A.lerp(tempVector3_B, 1-fadeT).sub(tempVector3_B);
         
-        magnetTarget.object3D.getWorldQuaternion(this.tempQuaternion_A);
-        magnetEl.object3D.getWorldQuaternion(this.tempQuaternion_B);
-        this.tempQuaternion_A.slerp(this.tempQuaternion_B, 1-fadeT).multiply(this.tempQuaternion_B.invert());
+        magnetTarget.object3D.getWorldQuaternion(tempQuaternion_A);
+        magnetEl.object3D.getWorldQuaternion(tempQuaternion_B);
+        tempQuaternion_A.slerp(tempQuaternion_B, 1-fadeT).multiply(tempQuaternion_B.invert());
         
+        tempVector3_B.copy(magnetEl.object3D.position);
+
         for (const bone of bones) {
-          bone.position.sub(magnetEl.object3D.position);
-          bone.position.applyQuaternion(this.tempQuaternion_A);
-          bone.position.add(magnetEl.object3D.position);
-          bone.applyQuaternion(this.tempQuaternion_A);
-          bone.position.add(this.tempVector3_A);
+          moveAroundAndTranslate(bone, tempVector3_B, tempQuaternion_A, tempVector3_A);
           bone.applyMatrix4(this.el.object3D.matrixWorld);
           bone.updateMatrixWorld();
         }
 
         // Move elements to match the bones but skil elements which are marked data-no-magnet
         for (const el of allEls.filter(el => el.dataset.noMagnet === undefined)) {
-          el.object3D.position.sub(magnetEl.object3D.position);
-          el.object3D.position.applyQuaternion(this.tempQuaternion_A);
-          el.object3D.position.add(magnetEl.object3D.position);
-          el.object3D.applyQuaternion(this.tempQuaternion_A);
-          el.object3D.position.add(this.tempVector3_A);
+          moveAroundAndTranslate(el.object3D, tempVector3_B, tempQuaternion_A, tempVector3_A);
+        }
+
+        if (controllerModel) {
+          moveAroundAndTranslate(controllerModel, tempVector3_B, tempQuaternion_A, tempVector3_A);
         }
       } else {
         for (const bone of bones) {
@@ -393,7 +452,7 @@ AFRAME.registerComponent("handy-controls", {
       }
     }
 
-    // perform hand tracking
+    // perform hand pose detection
     if (toUpdate.length && this.handyWorkUpdate) {
       this.handyWorkUpdate(
         toUpdate,
@@ -412,6 +471,16 @@ AFRAME.registerComponent("handy-controls", {
       handedness
     });
 	},
+  emitGamepad (els, name, details) {
+    details.event = name;
+    this.el.emit('gamepad_' + name, details);
+    this.el.emit('gamepad', details);
+
+    for (const el of els) {
+      el.emit('gamepad_' + name, details, false);
+      el.emit('gamepad', details, false);
+    }
+  },
   emit(name, handedness, details) {
     if (name === this[handedness + '_currentPose']) return;
     const els = Array.from(this.el.querySelectorAll(`[data-${handedness}]`));
@@ -452,6 +521,12 @@ AFRAME.registerComponent("handy-controls", {
     if (this.bonesRight) {
       this.bonesRight = null;
       this.el.removeObject3D("hand-mesh-right")
+    }
+    if (this.el.getObject3D('controller-model-left')) {
+      this.el.removeObject3D('controller-model-left')
+    }
+    if (this.el.getObject3D('controller-model-right')) {
+      this.el.removeObject3D('controller-model-right')
     }
   },
 });

@@ -67,14 +67,20 @@ The following are exposed on the component itself so you can hook into the libra
 Use the following properties to customise the component
 
 <!--SCHEMA-->
-| Property         | Description                                                                | Type   | Default                                                                                            |
-| :--------------- | :------------------------------------------------------------------------- | :----- | :------------------------------------------------------------------------------------------------- |
-| left             | URL for left controller                                                    | model  | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/left.glb  |
-| right            | URL for right controller                                                   | model  | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/right.glb |
-| materialOverride | Which hand to use the `material` component for One of both,left,right,none | string | both                                                                                               |
-| fuseVShort       | Time for a pose to trigger a pose event (ms)                               | number | 48                                                                                                 |
-| fuseShort        | Time for a pose to trigger a pose_fuseShort event (ms)                     | number | 480                                                                                                |
-| fuseLong         | Time for a pose to trigger a pose_fuseLong event (ms)                      | number | 1440                                                                                               |
+Vector3
+Vector3
+Vector3
+Quaternion
+Quaternion
+| Property         | Default                                                                                            | Description                                                                | Type    |
+| :--------------- | :------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------- | :------ |
+| renderGamepad    | true                                                                                               | Whether to render a gamepad model when it's not doing hand tracking        | boolean |
+| left             | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/left.glb  | URL for left controller                                                    | model   |
+| right            | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/right.glb | URL for right controller                                                   | model   |
+| materialOverride | both                                                                                               | Which hand to use the `material` component for One of both,left,right,none | string  |
+| fuseVShort       | 48                                                                                                 | Time for a pose to trigger a pose event (ms)                               | number  |
+| fuseShort        | 480                                                                                                | Time for a pose to trigger a pose_fuseShort event (ms)                     | number  |
+| fuseLong         | 1440                                                                                               | Time for a pose to trigger a pose_fuseLong event (ms)                      | number  |
 
 <!--SCHEMA_END-->
 
