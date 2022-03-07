@@ -89,6 +89,8 @@ AFRAME.registerComponent("handy-controls", {
     }
   },
   init() {
+    const sceneEl = this.el.sceneEl;
+
     this.handyWorkCallback = this.handyWorkCallback.bind(this);
     
     const webxrData = this.el.sceneEl.getAttribute('webxr');
@@ -138,13 +140,19 @@ AFRAME.registerComponent("handy-controls", {
       loadPose('vulcan', POSE_FOLDER + 'vulcan.handpose');
     }.bind(this));
     
-    for (const handedness of ['left', 'right']) {
+    for (const handedness of ['left', 'right', 'none']) {
       const els = Array.from(this.el.querySelectorAll(`[data-${handedness}]`));
       for (const el of els) {
         el.object3D.visible = false;
       }
     }
+
+    sceneEl.addEventListener("enter-vr", () => {
+      for (const name of ["select", "selectend", "squeeze", "squeezeend", "squeezestart"])
+        sceneEl.xrSession.addEventListener(name, this.eventFactory(name, this));
+    });
     
+    // How the grip pose for hands is created from the middle-finger-metacarpsal
     this.gripOffset = {
       right: new THREE.Vector3(-0.005, -0.03, 0),
       left: new THREE.Vector3(0.005, -0.03, 0)
@@ -233,6 +241,45 @@ AFRAME.registerComponent("handy-controls", {
     }
   },
 
+  eventFactory(eventName, bindTarget, event) {
+    function eventHandler(e) {
+      const session = this.el.sceneEl.xrSession;
+      const frame = e.frame;
+      const inputSource = e.inputSource;
+      const referenceSpace = this.el.sceneEl.renderer.xr.getReferenceSpace();
+      const pose = frame.getPose(inputSource.targetRaySpace, referenceSpace);
+      const handedness = e.inputSource.handedness;
+      const details = {
+        inputSource,
+        handedness
+      }
+      if (!pose) return;
+
+      let transientSourceIndex = 0;
+      for (const inputSource of session.inputSources) {
+        const allEls = Array.from(this.el.querySelectorAll(`[data-${inputSource.handedness}]`));
+        if (inputSource.targetRayMode === "screen") {
+          const name = `screen-${transientSourceIndex++}`;
+          for (const el of allEls) {
+            if (el.dataset[inputSource.handedness] === name) continue; 
+            el.object3D.position.copy(pose.transform.position);
+            el.object3D.quaternion.copy(pose.transform.orientation);
+            el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+            el.emit(eventName, details);
+          }
+        }
+
+        if (inputSource.gamepad || inputSource.hand) {
+          for (const el of allEls) {
+            el.emit(eventName, details);
+          }
+        }
+      }
+    }
+    if (event) return eventHandler.call(bindTarget, event);
+    return eventHandler.bind(bindTarget);
+  },
+
   getControllerModel(index, inputSource) {
     const object = this.el.getObject3D('controller-model-' + inputSource.handedness);
     if (object) {
@@ -241,6 +288,8 @@ AFRAME.registerComponent("handy-controls", {
       const renderer = this.el.sceneEl.renderer;
       const group = renderer.xr.getControllerGrip(index);
       const model = this.controllerModelFactory.createControllerModel(group);
+
+      // This tells the controllerModel that a new inputSource was just added and a model should be generated
       group.dispatchEvent({
         type: 'connected',
         data: inputSource
@@ -258,7 +307,25 @@ AFRAME.registerComponent("handy-controls", {
     const toUpdate = [];
     const frame = this.el.sceneEl.frame;
     
+    const els = Array.from(this.el.querySelectorAll(`[data-left],[data-right],[data-none]`));
+    const elArrays = { left: [], right: [], none: [] };
+    const elMaps = { left: new Map(), right: new Map(), none: new Map() };
+    for (const el of els) {
+      el.object3D.visible = false;
+      for (const handedness of ['left', 'right', 'none']) {
+        if (el.dataset[handedness] !== undefined) {
+          elArrays[handedness].push(el);
+
+          const poseName = el.dataset[handedness];
+          const poseElArray = elMaps[handedness].get(poseName) || [];
+          poseElArray.push(el);
+          elMaps[handedness].set(poseName, poseElArray);
+        }
+      }
+    }
+    
     let i=-1;
+    let transientSourceIndex = 0;
     inputSourceLoop:
     for (const inputSource of session.inputSources) {
       i++;
@@ -268,102 +335,13 @@ AFRAME.registerComponent("handy-controls", {
       let bones = [];
       const toMagnet = [];
       let controllerModel;
+      let handMesh;
       
-      const currentMesh = this.el.getObject3D("hand-mesh-" + inputSource.handedness);
-      if (!currentMesh) return;
-      
-      const allEls = Array.from(this.el.querySelectorAll(`[data-${inputSource.handedness}]`));
+      const allEls = elArrays[inputSource.handedness];
+      const elMap = elMaps[inputSource.handedness];
 
-      const elMap = new Map();
-      for (const el of allEls) {
-        const poseName = el.dataset[inputSource.handedness];
-        const elArray = elMap.get(poseName) || [];
-        elArray.push(el);
-        elMap.set(poseName, elArray);
-      }
-
-      if (!inputSource.hand) {
-        for (const el of allEls) {
-          el.object3D.visible = false;
-        }
-        currentMesh.visible = false;
-
-        if (this.data.renderGamepad) {
-          controllerModel = this.getControllerModel(i, inputSource);
-          controllerModel.visible = true;
-
-          if (inputSource.gripSpace) {
-            const pose = frame.getPose(inputSource.gripSpace, referenceSpace);
-            if (pose) {
-              controllerModel.position.copy(pose.transform.position);
-              controllerModel.quaternion.copy(pose.transform.orientation);
-              toMagnet.push(controllerModel);
-              if (elMap.has('grip')) for (const el of elMap.get('grip')) {
-                el.object3D.position.copy(pose.transform.position);
-                el.object3D.quaternion.copy(pose.transform.orientation);
-                el.object3D.visible = (el.getDOMAttribute('visible') !== false);
-                if (el.dataset.noMagnet === undefined) toMagnet.push(el.object3D);
-              }
-            }
-          }
-
-          // if it has a gamepad fire events for gamepad changes
-          if (inputSource.gamepad) {
-            const old = prevGamePads.get(inputSource);
-            const data = {
-              buttons: inputSource.gamepad.buttons.map(b => b.value),
-              axes: inputSource.gamepad.axes.slice(0)
-            };
-            if (old) {
-              const eventDetails = {handedness: inputSource.handedness, inputSource, data}
-              data.buttons.forEach((value,i)=>{
-                if (value !== old.buttons[i]) {
-                  let name = controllerModel.gamepadMappings?.buttons[i] || `button${i}`;
-                  if (value === 1) {
-                    this.emitGamepad(allEls, `${name}down`, Object.assign({value}, eventDetails));
-                  } else {
-                    this.emitGamepad(allEls, `${name}up`, Object.assign({value}, eventDetails));
-                  }
-                }
-              });
-              const axesMapping = controllerModel.gamepadMappings?.axes;
-              if (axesMapping && axesMapping.length) {
-                // There are some named axis so try to combine them together
-                changedAxes.clear();
-                const details =  {};
-                axesMapping.forEach(({name}, i)=>{
-                  if (name) {
-                    const value = data.axes[i];
-                    if (value !== old.axes[i]) {
-                      changedAxes.add(name);
-                    }
-                  }
-                });
-                if (changedAxes.size) {
-                  axesMapping.forEach(({name, type}, i)=>{
-                    if (name && changedAxes.has(name)) {
-                      const value = data.axes[i];
-                      details[name] =  details[name] || {};
-                      details[name][type.slice(0,1)] = value;
-                    }
-                  });
-                  for (const [name, detail] of Object.entries(details)) {
-                    this.emitGamepad(allEls, `${name}moved`, Object.assign(detail, eventDetails));
-                  }
-                }
-              } else {
-                data.axes.forEach((value,i)=>{
-                  let name = controllerModel.gamepadMappings?.axes[i] || `axes${i}`;
-                  if (value !== old.axes[i]) {
-                    this.emitGamepad(allEls, `${name}changed`, Object.assign({value}, eventDetails));
-                  }
-                });
-              }
-            }
-            prevGamePads.set(inputSource, data);
-          }
-        }
-      } else {
+      handMesh = this.el.getObject3D("hand-mesh-" + inputSource.handedness);
+      if (inputSource.hand) {
         toUpdate.push(inputSource);
         const controllerModel = this.el.getObject3D('controller-model-' + inputSource.handedness);
         if (controllerModel) controllerModel.visible = false;
@@ -375,14 +353,23 @@ AFRAME.registerComponent("handy-controls", {
         for (const bone of bones) {
           const joint = inputSource.hand.get(bone.jointName);
           if (joint) {
+
+            // Keep hand elements visible even when tracking is lost
+            if (handMesh.visible) {
+              if (elMap.has(bone.jointName)) {
+                for (const el of elMap.get(bone.jointName)) {
+                  el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+                }
+              }
+            }
+
             const pose = frame.getJointPose(joint, referenceSpace);
             if (pose) {
-              currentMesh.visible = true;
+              handMesh.visible = true;
               if (elMap.has(bone.jointName)) {
                 for (const el of elMap.get(bone.jointName)) {
                   el.object3D.position.copy(pose.transform.position);
                   el.object3D.quaternion.copy(pose.transform.orientation);
-                  el.object3D.visible = (el.getDOMAttribute('visible') !== false);
                   if (el.dataset.noMagnet === undefined) toMagnet.push(el.object3D);
                 }
               }
@@ -409,8 +396,29 @@ AFRAME.registerComponent("handy-controls", {
             }
           }
         }
+      } else {
+        if (handMesh) {
+          handMesh.visible = false;
+        }
       }
 
+      if (inputSource.targetRayMode === "screen") {
+        const name = `screen-${transientSourceIndex++}`;
+        if (elMap.has(name)) {
+          const pose = frame.getPose(inputSource.targetRaySpace, referenceSpace);
+          if (!pose) continue inputSourceLoop;
+          for (const el of elMap.get(name)) {
+            el.object3D.position.copy(pose.transform.position);
+            el.object3D.quaternion.copy(pose.transform.orientation);
+            el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+          }
+        }
+
+        // Don't do the magnet behaviour and don't render any gamepads
+        continue inputSourceLoop;
+      }
+
+      // handle any tracked elements attached to the ray space of the input source this works for any types
       if (elMap.has('ray') && inputSource.targetRaySpace) {
         const pose = frame.getPose(inputSource.targetRaySpace, referenceSpace);
         if (pose) {
@@ -421,6 +429,81 @@ AFRAME.registerComponent("handy-controls", {
             if (el.dataset.noMagnet === undefined) toMagnet.push(el.object3D);
           }
         }
+      }
+
+      // If we should draw gamepads then do 
+      if (this.data.renderGamepad && inputSource.gamepad && !inputSource.hand) {
+        controllerModel = this.getControllerModel(i, inputSource);
+        controllerModel.visible = true;
+
+        if (inputSource.gripSpace) {
+          const pose = frame.getPose(inputSource.gripSpace, referenceSpace);
+          if (pose) {
+            controllerModel.position.copy(pose.transform.position);
+            controllerModel.quaternion.copy(pose.transform.orientation);
+            toMagnet.push(controllerModel);
+            if (elMap.has('grip')) for (const el of elMap.get('grip')) {
+              el.object3D.position.copy(pose.transform.position);
+              el.object3D.quaternion.copy(pose.transform.orientation);
+              el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+              if (el.dataset.noMagnet === undefined) toMagnet.push(el.object3D);
+            }
+          }
+        }
+
+        // if it has a gamepad fire events for gamepad changes
+        const old = prevGamePads.get(inputSource);
+        const data = {
+          buttons: inputSource.gamepad.buttons.map(b => b.value),
+          axes: inputSource.gamepad.axes.slice(0)
+        };
+        if (old) {
+          const eventDetails = {handedness: inputSource.handedness, inputSource, data}
+          data.buttons.forEach((value,i)=>{
+            if (value !== old.buttons[i]) {
+              let name = controllerModel.gamepadMappings?.buttons[i] || `button${i}`;
+              if (value === 1) {
+                this.emitGamepad(allEls, `${name}down`, Object.assign({value}, eventDetails));
+              } else {
+                this.emitGamepad(allEls, `${name}up`, Object.assign({value}, eventDetails));
+              }
+            }
+          });
+          const axesMapping = controllerModel.gamepadMappings?.axes;
+          if (axesMapping && axesMapping.length) {
+            // There are some named axis so try to combine them together
+            changedAxes.clear();
+            const details =  {};
+            axesMapping.forEach(({name}, i)=>{
+              if (name) {
+                const value = data.axes[i];
+                if (value !== old.axes[i]) {
+                  changedAxes.add(name);
+                }
+              }
+            });
+            if (changedAxes.size) {
+              axesMapping.forEach(({name, type}, i)=>{
+                if (name && changedAxes.has(name)) {
+                  const value = data.axes[i];
+                  details[name] =  details[name] || {};
+                  details[name][type.slice(0,1)] = value;
+                }
+              });
+              for (const [name, detail] of Object.entries(details)) {
+                this.emitGamepad(allEls, `${name}moved`, Object.assign(detail, eventDetails));
+              }
+            }
+          } else {
+            data.axes.forEach((value,i)=>{
+              let name = controllerModel.gamepadMappings?.axes[i] || `axes${i}`;
+              if (value !== old.axes[i]) {
+                this.emitGamepad(allEls, `${name}changed`, Object.assign({value}, eventDetails));
+              }
+            });
+          }
+        }
+        prevGamePads.set(inputSource, data);
       }
       
       if (magnetEl) {
@@ -551,6 +634,9 @@ AFRAME.registerComponent("handy-controls", {
     }
     if (this.el.getObject3D('controller-model-right')) {
       this.el.removeObject3D('controller-model-right')
+    }
+    if (this.el.getObject3D('controller-model-none')) {
+      this.el.removeObject3D('controller-model-none')
     }
   },
 });

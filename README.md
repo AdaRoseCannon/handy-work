@@ -89,6 +89,10 @@ rotation set to match the bones they are set to where the bone can be one of:
 
 * grip (not a bone, where someone would hold an object)
 * ray (not a bone, the target ray space from WebXR)
+* screen-0 (1st transient input)
+* screen-1 (2nd transient input)
+* screen-2 (3rd transient input)
+* screen-n ({n+1}th transient input)
 * wrist
 * thumb-metacarpal
 * thumb-phalanx-proximal

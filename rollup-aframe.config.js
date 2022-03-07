@@ -1,5 +1,4 @@
 import replace from '@rollup/plugin-replace';
-import { terser } from "rollup-plugin-terser";
 import pkg from "./package.json";
 import resolve from "@rollup/plugin-node-resolve";
 
@@ -8,7 +7,7 @@ export default {
 	output: {
 		format: "iife",
 		sourcemap: true,
-		file: 'build/handy-controls.min.js',
+		file: 'build/handy-controls.js',
 	},
 	plugins: [
 		resolve(),
@@ -17,7 +16,6 @@ export default {
 			'__version__': function () {
 				return JSON.stringify(pkg.version)
 			}
-		}),
-		terser()
+		})
 	]
 };
