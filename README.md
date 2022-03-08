@@ -72,15 +72,15 @@ Vector3
 Vector3
 Quaternion
 Quaternion
-| Property         | Default                                                                                        | Description                                                                | Type    |
-| :--------------- | :--------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------- | :------ |
-| renderGamepad    | true                                                                                           | Whether to render a gamepad model when it's not doing hand tracking        | boolean |
-| left             | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles/generic-hand/left.glb  | URL for left controller                                                    | model   |
-| right            | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles/generic-hand/right.glb | URL for right controller                                                   | model   |
-| materialOverride | both                                                                                           | Which hand to use the `material` component for One of both,left,right,none | string  |
-| fuseVShort       | 48                                                                                             | Time for a pose to trigger a pose event (ms)                               | number  |
-| fuseShort        | 480                                                                                            | Time for a pose to trigger a pose_fuseShort event (ms)                     | number  |
-| fuseLong         | 1440                                                                                           | Time for a pose to trigger a pose_fuseLong event (ms)                      | number  |
+| Property         | One of               | Default                                                                                        | Description                                                                                     | Type   |
+| :--------------- | :------------------- | :--------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------- | :----- |
+| renderGamepad    | both,left,right,none | both                                                                                           | Whether to render a gamepad model when it's not doing hand tracking One of both,left,right,none | string |
+| left             |                      | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles/generic-hand/left.glb  | URL for left controller                                                                         | model  |
+| right            |                      | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles/generic-hand/right.glb | URL for right controller                                                                        | model  |
+| materialOverride | both,left,right,none | both                                                                                           | Which hand to use the `material` component for One of both,left,right,none                      | string |
+| fuseVShort       |                      | 48                                                                                             | Time for a pose to trigger a pose event (ms)                                                    | number |
+| fuseShort        |                      | 480                                                                                            | Time for a pose to trigger a pose_fuseShort event (ms)                                          | number |
+| fuseLong         |                      | 1440                                                                                           | Time for a pose to trigger a pose_fuseLong event (ms)                                           | number |
 
 <!--SCHEMA_END-->
 
@@ -165,6 +165,8 @@ that element the whole hand will get pulled towards it.
 Only set 1 `data-magnet` per hand. You can configure the magnetic elements by setting their data-magnet range e.g. `data-magnet-range="0.2,0.1"`. Where the first number is where the magnetism starts and the second the range at which the hand is totally moved to the destination location. In that example, which is the default it will start approaching from 0.2m and if the hand is within 0.1m it will be placed on the `#sword` handle.
 
 For physics systems it probably won't work well when you use magnet elements you probably want to use the real joint location, do declare that a joint should ignore magnet effects add `data-no-magnet` to it.
+
+The object currently attracting the controller will have it's ID noted on the `data-magnet` element as a `data-magnet-target` which you can read in JavaScript through the object's dataset.
 
 ```html
 <!-- inside the handy-controls -->
