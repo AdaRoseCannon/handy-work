@@ -8,7 +8,7 @@ Poses can be found in the `/poses/` folder and additional poses are welcome
 
 There is also an AFrame module which handles pose tracking and displaying hand models.
 
-## Module Usage Example
+## Hand Pose Module Usage Example
 
 ```javascript
 import {
@@ -84,15 +84,21 @@ Quaternion
 
 <!--SCHEMA_END-->
 
-Child entities with the `data-left` or `data-right` properties have their position and 
-rotation set to match the bones they are set to where the bone can be one of:
+Child entities with the `data-left`, `data-right` or `data-none` properties have their position and 
+rotation set to match the tracked points from the WebXR API:
 
-* grip (not a bone, where someone would hold an object)
-* ray (not a bone, the target ray space from WebXR)
+`data-left` and `data-right` are used for tracked hands or controllers where the hardware has controllers
+which are explicity handed. i.e. Oculus Quest. Some hardware has a single ambiguously handed controller
+this will be exposed as `data-none` because it has no handedness.  Screen based transient inputs will also
+be exposed under `data-none`.
+
+* grip (where someone would hold an object)
+* ray (the target ray space from WebXR)
 * screen-0 (1st transient input)
 * screen-1 (2nd transient input)
 * screen-2 (3rd transient input)
 * screen-n ({n+1}th transient input)
+
 * wrist
 * thumb-metacarpal
 * thumb-phalanx-proximal
@@ -119,7 +125,39 @@ rotation set to match the bones they are set to where the bone can be one of:
 * pinky-finger-phalanx-distal
 * pinky-finger-tip
 
-*Magnetic Actions*
+### Events
+
+The component and each child emit events when they happen these events are
+
+#### Standard WebXR API Events
+
+* "select"
+* "selectstart"
+* "selectend"
+* "squeeze"
+* "squeezeend"
+* "squeezestart"
+
+#### Poses
+
+* pose_[name]
+* pose_[name]_fuseShort
+* pose_[name]_fuseLong
+
+Where name is one of the poses in `/poses`
+
+You can see what the currently detected pose is by listening for `"pose"` events and inspecting `"event.detail.pose"`
+
+#### Gamepad Events
+
+These are very hardware dependent. If it is able to get access to the input profile data from the WebXR
+input profiles repo then this will fire off events as named in that. Such as thumbstickmoved or a-buttondown x-buttonup. 
+
+Otherwise it will just fire events like button0down button0up or axes0moved
+
+To find out what a particular piece of hardware is using listen for `"gamepad"` events and inspect the `event.detail.event`.
+
+### Magnetic Actions
 
 Add data-magnet set to a query selector for magnetic elements so that when the joint approaches
 that element the whole hand will get pulled towards it.
@@ -137,7 +175,7 @@ For physics systems it probably won't work well when you use magnet elements you
 <a-gltf-model id="sword" src="#sword-gltf" data-magnet-range="0.2,0.1"></a-gltf-model>
 ```
 
-Example use case:
+### Example use case:
 
 ```html
 <!-- After the AFrame script -->

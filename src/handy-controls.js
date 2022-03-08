@@ -148,7 +148,7 @@ AFRAME.registerComponent("handy-controls", {
     }
 
     sceneEl.addEventListener("enter-vr", () => {
-      for (const name of ["select", "selectend", "squeeze", "squeezeend", "squeezestart"])
+      for (const name of ["select", "selectstart", "selectend", "squeeze", "squeezeend", "squeezestart"])
         sceneEl.xrSession.addEventListener(name, this.eventFactory(name, this));
     });
     
@@ -498,7 +498,7 @@ AFRAME.registerComponent("handy-controls", {
             data.axes.forEach((value,i)=>{
               let name = controllerModel.gamepadMappings?.axes[i] || `axes${i}`;
               if (value !== old.axes[i]) {
-                this.emitGamepad(allEls, `${name}changed`, Object.assign({value}, eventDetails));
+                this.emitGamepad(allEls, `${name}moved`, Object.assign({value}, eventDetails));
               }
             });
           }
