@@ -1,6 +1,6 @@
 {
   "name": "handy-work",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Web Worker enabled hand-pose tracking for WebXR.",
   "repository": "https://github.com/AdaRoseCannon/handy-work",
   "main": "build/cjs/handy-work.standalone.js",
