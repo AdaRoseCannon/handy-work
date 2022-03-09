@@ -69,7 +69,7 @@ Use the following properties to customise the component
 <!--SCHEMA-->
 Vector3
 Vector3
-Vector3
+Quaternion
 Quaternion
 Quaternion
 | Property         | One of                    | Default                                                                                        | Description                                                                                                                                                                                                              | Type   |

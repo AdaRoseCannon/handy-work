@@ -710,11 +710,11 @@
   const prevGamePads = new Map();
   const changedAxes = new Set();
 
-  const tempVector3 = new THREE.Vector3();
   const tempVector3_A = new THREE.Vector3();
   const tempVector3_B = new THREE.Vector3();
   const tempQuaternion_A = new THREE.Quaternion();
   const tempQuaternion_B = new THREE.Quaternion();
+  const tempQuaternion_C = new THREE.Quaternion();
   const handednesses = ['left', 'right', 'none'];
 
   const joints = [
@@ -1167,9 +1167,10 @@
         if (magnetEl) {
           magnetEl.object3D.updateWorldMatrix(true, false);
           const magnetTargets = document.querySelectorAll(magnetEl.dataset.magnet);
+          magnetEl.object3D.getWorldPosition(tempVector3_A);
           for (const el of magnetTargets) {
             const [magnetRange,fadeEnd] = (el.dataset.magnetRange || "0.2,0.1").split(',').map(n => Number(n));
-            const d =  magnetEl.object3D.worldToLocal(el.object3D.getWorldPosition(tempVector3)).length();
+            const d =  el.object3D.getWorldPosition(tempVector3_B).sub(tempVector3_A).length();
             if (d < magnetRange) {
               magnetTarget = el;
               fadeT = invlerp(magnetRange,fadeEnd===undefined?magnetRange:fadeEnd,d);
@@ -1185,16 +1186,17 @@
         }
         
         if (magnetTarget) {
-          magnetTarget.object3D.getWorldPosition(tempVector3_A);
-          magnetEl.object3D.getWorldPosition(tempVector3_B);
+
+          this.el.object3D.worldToLocal(magnetTarget.object3D.getWorldPosition(tempVector3_A));
+          tempVector3_B.copy(magnetEl.object3D.position);
           tempVector3_A.lerp(tempVector3_B, 1-fadeT).sub(tempVector3_B);
           
+          this.el.object3D.getWorldQuaternion(tempQuaternion_C).invert();
           magnetTarget.object3D.getWorldQuaternion(tempQuaternion_A);
-          magnetEl.object3D.getWorldQuaternion(tempQuaternion_B);
+          tempQuaternion_A.premultiply(tempQuaternion_C);
+          tempQuaternion_B.copy(magnetEl.object3D.quaternion);
           tempQuaternion_A.slerp(tempQuaternion_B, 1-fadeT).multiply(tempQuaternion_B.invert());
           
-          magnetEl.object3D.getWorldPosition(tempVector3_B);
-
           // Move elements to match the bones but skil elements which are marked data-no-magnet
           for (const object3D of toMagnet) {
             object3D.position.sub(tempVector3_B);
