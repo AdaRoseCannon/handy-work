@@ -702,7 +702,7 @@
   /* global AFRAME, THREE */
   const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles";
   const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "/generic-hand";
-  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "2.2.1" );
+  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "2.3.0" );
   const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
   const POSE_FOLDER = LIB_URL + "/poses/";
   const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));
@@ -715,14 +715,8 @@
   const tempVector3_B = new THREE.Vector3();
   const tempQuaternion_A = new THREE.Quaternion();
   const tempQuaternion_B = new THREE.Quaternion();
+  const handednesses = ['left', 'right', 'none'];
 
-  function moveAroundAndTranslate(object3D, center, quaternion, translate) {
-    object3D.position.sub(center);
-    object3D.position.applyQuaternion(quaternion);
-    object3D.position.add(center);
-    object3D.applyQuaternion(quaternion);
-    object3D.position.add(translate);
-  }
   const joints = [
     "wrist",
     "thumb-metacarpal",
@@ -754,9 +748,9 @@
   AFRAME.registerComponent("handy-controls", {
     schema: {
       renderGamepad: {
-        oneOf: ['both', 'left', 'right', 'none'],
-        default: 'both',
-        description: `Whether to render a gamepad model when it's not doing hand tracking`
+        oneOf: ['any', 'left', 'right', 'none', 'never'],
+        default: 'any',
+        description: `Whether to render a gamepad model when it's not doing hand tracking, right, none and left are the names of controller handedness, any is all of them, and never is to not draw gamepads`
       },
       left: {
         description: 'URL for left controller',
@@ -770,7 +764,7 @@
       },
       materialOverride: {
         description: 'Which hand to use the `material` component for',
-        oneOf: ['both', 'left', 'right', 'none'],
+        oneOf: ['both', 'left', 'right', 'neither'],
         default: 'both'
       },
       fuseVShort: {
@@ -838,7 +832,7 @@
         loadPose('vulcan', POSE_FOLDER + 'vulcan.handpose');
       }.bind(this));
       
-      for (const handedness of ['left', 'right', 'none']) {
+      for (const handedness of handednesses) {
         const els = Array.from(this.el.querySelectorAll(`[data-${handedness}]`));
         for (const el of els) {
           el.object3D.visible = false;
@@ -849,28 +843,30 @@
         for (const name of ["select", "selectstart", "selectend", "squeeze", "squeezeend", "squeezestart"])
           sceneEl.xrSession.addEventListener(name, this.eventFactory(name, this));
       });
-      
-      // How the grip pose for hands is created from the middle-finger-metacarpsal
-      this.gripOffset = {
-        right: new THREE.Vector3(-0.005, -0.03, 0),
-        left: new THREE.Vector3(0.005, -0.03, 0)
-      };
-      this.gripQuaternions = {
-        right: [new THREE.Quaternion().setFromUnitVectors(
-          new THREE.Vector3(0,0,-1),
-          new THREE.Vector3(-1,0,0).normalize()
-        ),new THREE.Quaternion().setFromUnitVectors(
-          new THREE.Vector3(0,1,0),
-          new THREE.Vector3(-1,0,0)
-        )],
-        left: [new THREE.Quaternion().setFromUnitVectors(
-          new THREE.Vector3(0,0,1),
-          new THREE.Vector3(1,0,0).normalize()
-        ),new THREE.Quaternion().setFromUnitVectors(
-          new THREE.Vector3(1,1,0),
-          new THREE.Vector3(-1,0,-1)
-        )]
-      };
+
+      this.elArrays = { left: [], right: [], none: [] };
+      this.elMaps = { left: new Map(), right: new Map(), none: new Map() };
+      const observer = new MutationObserver((function observeFunction() {
+        for (const handedness of handednesses) {
+          self.elArrays[handedness].splice(0);
+          self.elMaps[handedness].clear();
+        }
+
+        const els = Array.from(self.el.querySelectorAll(`[data-left],[data-right],[data-none]`));
+        for (const el of els) {
+          for (const handedness of handednesses) {
+            if (el.dataset[handedness] !== undefined) {
+              self.elArrays[handedness].push(el);
+              const poseName = el.dataset[handedness];
+              const poseElArray = self.elMaps[handedness].get(poseName) || [];
+              poseElArray.push(el);
+              self.elMaps[handedness].set(poseName, poseElArray);
+            }
+          }
+        }
+        return observeFunction;
+      }.bind(this))());
+      observer.observe(this.el, { childList: true, attributes: true, subtree: true });
     },
 
     async gltfToJoints(src, name) {
@@ -953,13 +949,13 @@
         };
         if (!pose) return;
 
-        const allEls = Array.from(this.el.querySelectorAll(`[data-${inputSource.handedness}]`));
+        const allEls = this.elArrays[handedness];
         if (inputSource.targetRayMode === "screen") {
           const name = `screen-${
           Array.from(session.inputSources).filter(i=>i.targetRayMode === "screen").indexOf(inputSource)
         }`;
           for (const el of allEls) {
-            if (el.dataset[inputSource.handedness] === name) {
+            if (el.dataset[handedness] === name) {
               el.object3D.position.copy(pose.transform.position);
               el.object3D.quaternion.copy(pose.transform.orientation);
               el.object3D.visible = (el.getDOMAttribute('visible') !== false);
@@ -984,10 +980,7 @@
         const model = this.controllerModelFactory.createControllerModel(group);
 
         // This tells the controllerModel that a new inputSource was just added and a model should be generated
-        group.dispatchEvent({
-          type: 'connected',
-          data: inputSource
-        });
+        group.dispatchEvent({ type: 'connected', data: inputSource });
         this.el.setObject3D('controller-model-' + inputSource.handedness, model);
         return model;
       }
@@ -1000,29 +993,16 @@
       const referenceSpace = renderer.xr.getReferenceSpace();
       const toUpdate = [];
       const frame = this.el.sceneEl.frame;
-      
-      const els = Array.from(this.el.querySelectorAll(`[data-left],[data-right],[data-none]`));
-      const elArrays = { left: [], right: [], none: [] };
-      const elMaps = { left: new Map(), right: new Map(), none: new Map() };
-      for (const el of els) {
-        el.object3D.visible = false;
-        for (const handedness of ['left', 'right', 'none']) {
-          if (el.dataset[handedness] !== undefined) {
-            elArrays[handedness].push(el);
 
-            const poseName = el.dataset[handedness];
-            const poseElArray = elMaps[handedness].get(poseName) || [];
-            poseElArray.push(el);
-            elMaps[handedness].set(poseName, poseElArray);
-          }
-        }
+      for (const el of this.el.children){
+        el.object3D.visible = false;
       }
-      
-      let i=-1;
+
+      let i=0;
       let transientSourceIndex = 0;
       inputSourceLoop:
       for (const inputSource of session.inputSources) {
-        i++;
+        const inputSourceIndex = i++;
         const magnetEl = this.el.querySelector(`[data-magnet][data-${inputSource.handedness}]`);
         let magnetTarget = null;
         let fadeT = 1;
@@ -1031,8 +1011,8 @@
         let controllerModel;
         let handMesh;
         
-        const allEls = elArrays[inputSource.handedness];
-        const elMap = elMaps[inputSource.handedness];
+        const allEls = this.elArrays[inputSource.handedness];
+        const elMap = this.elMaps[inputSource.handedness];
 
         handMesh = this.el.getObject3D("hand-mesh-" + inputSource.handedness);
         if (inputSource.hand) {
@@ -1046,6 +1026,7 @@
           if (!bones.length) continue;
           for (const bone of bones) {
             const joint = inputSource.hand.get(bone.jointName);
+            toMagnet.push(bone);
             if (joint) {
 
               // Keep hand elements visible even when tracking is lost
@@ -1068,20 +1049,6 @@
                   }
                 }
                 
-                if (bone.jointName === "middle-finger-metacarpal") {
-                  if (elMap.has('grip')) {
-                    for (const el of elMap.get('grip')) {
-                      el.object3D.quaternion.copy(pose.transform.orientation);
-                      this.gripQuaternions[inputSource.handedness].forEach(q => el.object3D.quaternion.multiply(q));
-                      el.object3D.position.copy(this.gripOffset[inputSource.handedness]);
-                      el.object3D.position.applyQuaternion(el.object3D.quaternion);
-                      el.object3D.position.add(pose.transform.position);
-                      el.object3D.visible = (el.getDOMAttribute('visible') !== false);
-                      if (el.dataset.noMagnet === undefined) toMagnet.push(el.object3D);
-                    }
-                  }
-                }
-                
                 bone.position.copy(pose.transform.position);
                 bone.quaternion.copy(pose.transform.orientation);
               } else {
@@ -1090,10 +1057,8 @@
               }
             }
           }
-        } else {
-          if (handMesh) {
-            handMesh.visible = false;
-          }
+        } else if (handMesh)  {
+          handMesh.visible = false;
         }
 
         if (inputSource.targetRayMode === "screen") {
@@ -1113,24 +1078,26 @@
         }
 
         // handle any tracked elements attached to the ray space of the input source this works for any types
-        if (elMap.has('ray') && inputSource.targetRaySpace) {
-          const pose = frame.getPose(inputSource.targetRaySpace, referenceSpace);
-          if (pose) {
-            for (const el of elMap.get('ray')) {
-              el.object3D.position.copy(pose.transform.position);
-              el.object3D.quaternion.copy(pose.transform.orientation);
-              el.object3D.visible = (el.getDOMAttribute('visible') !== false);
-              if (el.dataset.noMagnet === undefined) toMagnet.push(el.object3D);
+        for (const [name, inputSourcePose] of [['ray', inputSource.targetRaySpace],['grip', inputSource.gripSpace]]) {
+          if (elMap.has(name) && inputSourcePose) {
+            const pose = frame.getPose(inputSourcePose, referenceSpace);
+            if (pose) {
+              for (const el of elMap.get(name)) {
+                el.object3D.position.copy(pose.transform.position);
+                el.object3D.quaternion.copy(pose.transform.orientation);
+                el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+                if (el.dataset.noMagnet === undefined) toMagnet.push(el.object3D);
+              }
             }
           }
         }
 
-        // If we should draw gamepads then do, but don't draw gamepad and hand
+        // If we should draw gamepads then do, but don't draw gamepad and hand if btoh present
         if (
-          (this.data.renderGamepad === "both" || this.data.renderGamepad === inputSource.handedness) &&
+          (this.data.renderGamepad === "any" || this.data.renderGamepad === inputSource.handedness) &&
           inputSource.gamepad && !inputSource.hand
         ) {
-          controllerModel = this.getControllerModel(i, inputSource);
+          controllerModel = this.getControllerModel(inputSourceIndex, inputSource);
           controllerModel.visible = true;
 
           if (inputSource.gripSpace) {
@@ -1139,12 +1106,6 @@
               controllerModel.position.copy(pose.transform.position);
               controllerModel.quaternion.copy(pose.transform.orientation);
               toMagnet.push(controllerModel);
-              if (elMap.has('grip')) for (const el of elMap.get('grip')) {
-                el.object3D.position.copy(pose.transform.position);
-                el.object3D.quaternion.copy(pose.transform.orientation);
-                el.object3D.visible = (el.getDOMAttribute('visible') !== false);
-                if (el.dataset.noMagnet === undefined) toMagnet.push(el.object3D);
-              }
             }
           }
 
@@ -1205,35 +1166,25 @@
         
         if (magnetEl) {
           magnetEl.object3D.updateWorldMatrix(true, false);
-          const magnetTargets = Array.from(document.querySelectorAll(magnetEl.dataset.magnet));
+          const magnetTargets = document.querySelectorAll(magnetEl.dataset.magnet);
           for (const el of magnetTargets) {
             const [magnetRange,fadeEnd] = (el.dataset.magnetRange || "0.2,0.1").split(',').map(n => Number(n));
-            el.object3D.getWorldPosition(tempVector3);
-            magnetEl.object3D.worldToLocal(tempVector3);
-            
-            const d = tempVector3.length();
+            const d =  magnetEl.object3D.worldToLocal(el.object3D.getWorldPosition(tempVector3)).length();
             if (d < magnetRange) {
               magnetTarget = el;
-              
-              if (fadeEnd) {
-                fadeT = invlerp(magnetRange,fadeEnd,d);
-              } else {
-                fadeT = 1;
-              }
-              
+              fadeT = invlerp(magnetRange,fadeEnd===undefined?magnetRange:fadeEnd,d);
               break;
             }
           }
-        }
 
-        if (fadeT > 0.99 && magnetTarget && magnetTarget.id) {
-          magnetEl.dataset.magnetTarget = magnetTarget.id;
-        } else {
-          delete magnetEl.dataset.magnetTarget;
+          if (fadeT > 0.5 && magnetTarget && magnetTarget.id) {
+            magnetEl.dataset.magnetTarget = magnetTarget.id;
+          } else {
+            delete magnetEl.dataset.magnetTarget;
+          }
         }
         
         if (magnetTarget) {
-          
           magnetTarget.object3D.getWorldPosition(tempVector3_A);
           magnetEl.object3D.getWorldPosition(tempVector3_B);
           tempVector3_A.lerp(tempVector3_B, 1-fadeT).sub(tempVector3_B);
@@ -1242,23 +1193,20 @@
           magnetEl.object3D.getWorldQuaternion(tempQuaternion_B);
           tempQuaternion_A.slerp(tempQuaternion_B, 1-fadeT).multiply(tempQuaternion_B.invert());
           
-          tempVector3_B.copy(magnetEl.object3D.position);
-
-          for (const bone of bones) {
-            moveAroundAndTranslate(bone, tempVector3_B, tempQuaternion_A, tempVector3_A);
-            bone.applyMatrix4(this.el.object3D.matrixWorld);
-            bone.updateMatrixWorld();
-          }
+          magnetEl.object3D.getWorldPosition(tempVector3_B);
 
           // Move elements to match the bones but skil elements which are marked data-no-magnet
           for (const object3D of toMagnet) {
-            moveAroundAndTranslate(object3D, tempVector3_B, tempQuaternion_A, tempVector3_A);
+            object3D.position.sub(tempVector3_B);
+            object3D.position.applyQuaternion(tempQuaternion_A);
+            object3D.position.add(tempVector3_B);
+            object3D.applyQuaternion(tempQuaternion_A);
+            object3D.position.add(tempVector3_A);
           }
-        } else {
-          for (const bone of bones) {
-            bone.applyMatrix4(this.el.object3D.matrixWorld);
-            bone.updateMatrixWorld();
-          }
+        }
+        for (const bone of bones) {
+          bone.applyMatrix4(this.el.object3D.matrixWorld);
+          bone.updateMatrixWorld();
         }
       }
 
@@ -1275,7 +1223,7 @@
     handyWorkCallback: function ({
   		distances, handedness
   	}) {
-  		this.emit(distances[0][0], handedness, {
+  		this.emitHandpose(distances[0][0], handedness, {
         pose: distances[0][0],
         poses: distances,
         handedness
@@ -1283,15 +1231,12 @@
   	},
     emitGamepad (els, name, details) {
       details.event = name;
-      this.el.emit(name, details);
-      this.el.emit('gamepad', details);
-
       for (const el of els) {
         el.emit(name, details, false);
         el.emit('gamepad', details, false);
       }
     },
-    emit(name, handedness, details) {
+    emitHandpose(name, handedness, details) {
       if (name === this[handedness + '_currentPose']) return;
       const els = Array.from(this.el.querySelectorAll(`[data-${handedness}]`));
       
@@ -1302,9 +1247,6 @@
       this[handedness + '_currentPose'] = name;
 
       this[handedness + '_vshortTimeout'] = setTimeout(() => {
-        this.el.emit('pose_' + name, details);
-        this.el.emit('pose', details);
-
         for (const el of els) {
           el.emit('pose_' + name, details, false);
           el.emit('pose', details, false);
@@ -1312,14 +1254,10 @@
       }, this.data.fuseVShort);
       
       this[handedness + '_shortTimeout'] = setTimeout(() => {
-        // console.log('Emiting ', name + '_fuseShort');
-        this.el.emit('pose_' + name + '_fuseShort', details);
         for (const el of els) el.emit('pose_' + name + '_fuseShort', details, false);
       }, this.data.fuseShort);
       
-      this[handedness + '_longTimeout'] = setTimeout(() => {
-        // console.log('Emiting ', name + '_fuseLong');
-        this.el.emit('pose_' + name + '_fuseLong', details);    
+      this[handedness + '_longTimeout'] = setTimeout(() => { 
         for (const el of els) el.emit('pose_' + name + '_fuseLong', details, false);
       }, this.data.fuseLong);
     },
@@ -1332,15 +1270,9 @@
         this.bonesRight = null;
         this.el.removeObject3D("hand-mesh-right");
       }
-      if (this.el.getObject3D('controller-model-left')) {
-        this.el.removeObject3D('controller-model-left');
-      }
-      if (this.el.getObject3D('controller-model-right')) {
-        this.el.removeObject3D('controller-model-right');
-      }
-      if (this.el.getObject3D('controller-model-none')) {
-        this.el.removeObject3D('controller-model-none');
-      }
+      if (this.el.getObject3D('controller-model-left')) this.el.removeObject3D('controller-model-left');
+      if (this.el.getObject3D('controller-model-right')) this.el.removeObject3D('controller-model-right');
+      if (this.el.getObject3D('controller-model-none')) this.el.removeObject3D('controller-model-none');
     },
   });
 

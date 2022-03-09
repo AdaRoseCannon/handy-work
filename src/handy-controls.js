@@ -18,13 +18,6 @@ const tempQuaternion_A = new THREE.Quaternion();
 const tempQuaternion_B = new THREE.Quaternion();
 const handednesses = ['left', 'right', 'none'];
 
-function moveAroundAndTranslate(object3D, center, quaternion, translate) {
-  object3D.position.sub(center);
-  object3D.position.applyQuaternion(quaternion);
-  object3D.position.add(center);
-  object3D.applyQuaternion(quaternion);
-  object3D.position.add(translate);
-}
 const joints = [
   "wrist",
   "thumb-metacarpal",
@@ -56,9 +49,9 @@ const joints = [
 AFRAME.registerComponent("handy-controls", {
   schema: {
     renderGamepad: {
-      oneOf: ['both', 'left', 'right', 'none'],
-      default: 'both',
-      description: `Whether to render a gamepad model when it's not doing hand tracking`
+      oneOf: ['any', 'left', 'right', 'none', 'never'],
+      default: 'any',
+      description: `Whether to render a gamepad model when it's not doing hand tracking, right, none and left are the names of controller handedness, any is all of them, and never is to not draw gamepads`
     },
     left: {
       description: 'URL for left controller',
@@ -72,7 +65,7 @@ AFRAME.registerComponent("handy-controls", {
     },
     materialOverride: {
       description: 'Which hand to use the `material` component for',
-      oneOf: ['both', 'left', 'right', 'none'],
+      oneOf: ['both', 'left', 'right', 'neither'],
       default: 'both'
     },
     fuseVShort: {
@@ -154,7 +147,7 @@ AFRAME.registerComponent("handy-controls", {
 
     this.elArrays = { left: [], right: [], none: [] };
     this.elMaps = { left: new Map(), right: new Map(), none: new Map() };
-    const observer = new MutationObserver(function () {
+    const observer = new MutationObserver((function observeFunction() {
       for (const handedness of handednesses) {
         self.elArrays[handedness].splice(0);
         self.elMaps[handedness].clear();
@@ -172,7 +165,8 @@ AFRAME.registerComponent("handy-controls", {
           }
         }
       }
-    });
+      return observeFunction;
+    }.bind(this))());
     observer.observe(this.el, { childList: true, attributes: true, subtree: true });
   },
 
@@ -256,13 +250,13 @@ AFRAME.registerComponent("handy-controls", {
       }
       if (!pose) return;
 
-      const allEls = Array.from(this.el.querySelectorAll(`[data-${inputSource.handedness}]`));
+      const allEls = this.elArrays[handedness];
       if (inputSource.targetRayMode === "screen") {
         const name = `screen-${
           Array.from(session.inputSources).filter(i=>i.targetRayMode === "screen").indexOf(inputSource)
         }`;
         for (const el of allEls) {
-          if (el.dataset[inputSource.handedness] === name) {
+          if (el.dataset[handedness] === name) {
             el.object3D.position.copy(pose.transform.position);
             el.object3D.quaternion.copy(pose.transform.orientation);
             el.object3D.visible = (el.getDOMAttribute('visible') !== false);
@@ -301,15 +295,15 @@ AFRAME.registerComponent("handy-controls", {
     const toUpdate = [];
     const frame = this.el.sceneEl.frame;
 
-    for (const el of this.el.childNodes){
+    for (const el of this.el.children){
       el.object3D.visible = false;
     }
 
-    let i=-1;
+    let i=0;
     let transientSourceIndex = 0;
     inputSourceLoop:
     for (const inputSource of session.inputSources) {
-      i++;
+      const inputSourceIndex = i++;
       const magnetEl = this.el.querySelector(`[data-magnet][data-${inputSource.handedness}]`);
       let magnetTarget = null;
       let fadeT = 1;
@@ -333,6 +327,7 @@ AFRAME.registerComponent("handy-controls", {
         if (!bones.length) continue;
         for (const bone of bones) {
           const joint = inputSource.hand.get(bone.jointName);
+          toMagnet.push(bone);
           if (joint) {
 
             // Keep hand elements visible even when tracking is lost
@@ -384,9 +379,9 @@ AFRAME.registerComponent("handy-controls", {
       }
 
       // handle any tracked elements attached to the ray space of the input source this works for any types
-      for (const [name, pose] of [['ray', inputSource.targetRaySpace],['grip', inputSource.gripSpace]]) {
-        if (elMap.has(name) && pose) {
-          const pose = frame.getPose(pose, referenceSpace);
+      for (const [name, inputSourcePose] of [['ray', inputSource.targetRaySpace],['grip', inputSource.gripSpace]]) {
+        if (elMap.has(name) && inputSourcePose) {
+          const pose = frame.getPose(inputSourcePose, referenceSpace);
           if (pose) {
             for (const el of elMap.get(name)) {
               el.object3D.position.copy(pose.transform.position);
@@ -398,12 +393,12 @@ AFRAME.registerComponent("handy-controls", {
         }
       }
 
-      // If we should draw gamepads then do, but don't draw gamepad and hand
+      // If we should draw gamepads then do, but don't draw gamepad and hand if btoh present
       if (
-        (this.data.renderGamepad === "both" || this.data.renderGamepad === inputSource.handedness) &&
+        (this.data.renderGamepad === "any" || this.data.renderGamepad === inputSource.handedness) &&
         inputSource.gamepad && !inputSource.hand
       ) {
-        controllerModel = this.getControllerModel(i, inputSource);
+        controllerModel = this.getControllerModel(inputSourceIndex, inputSource);
         controllerModel.visible = true;
 
         if (inputSource.gripSpace) {
@@ -472,35 +467,25 @@ AFRAME.registerComponent("handy-controls", {
       
       if (magnetEl) {
         magnetEl.object3D.updateWorldMatrix(true, false);
-        const magnetTargets = Array.from(document.querySelectorAll(magnetEl.dataset.magnet));
+        const magnetTargets = document.querySelectorAll(magnetEl.dataset.magnet);
         for (const el of magnetTargets) {
           const [magnetRange,fadeEnd] = (el.dataset.magnetRange || "0.2,0.1").split(',').map(n => Number(n));
-          el.object3D.getWorldPosition(tempVector3);
-          magnetEl.object3D.worldToLocal(tempVector3);
-          
-          const d = tempVector3.length();
+          const d =  magnetEl.object3D.worldToLocal(el.object3D.getWorldPosition(tempVector3)).length();
           if (d < magnetRange) {
             magnetTarget = el;
-            
-            if (fadeEnd) {
-              fadeT = invlerp(magnetRange,fadeEnd,d);
-            } else {
-              fadeT = 1;
-            }
-            
+            fadeT = invlerp(magnetRange,fadeEnd===undefined?magnetRange:fadeEnd,d);
             break;
           }
         }
-      }
 
-      if (fadeT > 0.99 && magnetTarget && magnetTarget.id) {
-        magnetEl.dataset.magnetTarget = magnetTarget.id;
-      } else {
-        delete magnetEl.dataset.magnetTarget;
+        if (fadeT > 0.5 && magnetTarget && magnetTarget.id) {
+          magnetEl.dataset.magnetTarget = magnetTarget.id;
+        } else {
+          delete magnetEl.dataset.magnetTarget;
+        }
       }
       
       if (magnetTarget) {
-        
         magnetTarget.object3D.getWorldPosition(tempVector3_A);
         magnetEl.object3D.getWorldPosition(tempVector3_B);
         tempVector3_A.lerp(tempVector3_B, 1-fadeT).sub(tempVector3_B);
@@ -509,23 +494,20 @@ AFRAME.registerComponent("handy-controls", {
         magnetEl.object3D.getWorldQuaternion(tempQuaternion_B);
         tempQuaternion_A.slerp(tempQuaternion_B, 1-fadeT).multiply(tempQuaternion_B.invert());
         
-        tempVector3_B.copy(magnetEl.object3D.position);
-
-        for (const bone of bones) {
-          moveAroundAndTranslate(bone, tempVector3_B, tempQuaternion_A, tempVector3_A);
-          bone.applyMatrix4(this.el.object3D.matrixWorld);
-          bone.updateMatrixWorld();
-        }
+        magnetEl.object3D.getWorldPosition(tempVector3_B);
 
         // Move elements to match the bones but skil elements which are marked data-no-magnet
         for (const object3D of toMagnet) {
-          moveAroundAndTranslate(object3D, tempVector3_B, tempQuaternion_A, tempVector3_A);
+          object3D.position.sub(tempVector3_B);
+          object3D.position.applyQuaternion(tempQuaternion_A);
+          object3D.position.add(tempVector3_B);
+          object3D.applyQuaternion(tempQuaternion_A);
+          object3D.position.add(tempVector3_A);
         }
-      } else {
-        for (const bone of bones) {
-          bone.applyMatrix4(this.el.object3D.matrixWorld);
-          bone.updateMatrixWorld();
-        }
+      }
+      for (const bone of bones) {
+        bone.applyMatrix4(this.el.object3D.matrixWorld);
+        bone.updateMatrixWorld();
       }
     }
 
