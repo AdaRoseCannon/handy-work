@@ -702,7 +702,7 @@
   /* global AFRAME, THREE */
   const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles";
   const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "/generic-hand";
-  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "2.3.0" );
+  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "2.4.0" );
   const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
   const POSE_FOLDER = LIB_URL + "/poses/";
   const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));
@@ -1166,7 +1166,7 @@
         
         if (magnetEl) {
           magnetEl.object3D.updateWorldMatrix(true, false);
-          const magnetTargets = document.querySelectorAll(magnetEl.dataset.magnet);
+          const magnetTargets = Array.from(document.querySelectorAll(magnetEl.dataset.magnet)).sort((a,b)=>Number(b.dataset.magnetPriority || 1)-Number(a.dataset.magnetPriority || 1));
           magnetEl.object3D.getWorldPosition(tempVector3_A);
           for (const el of magnetTargets) {
             const [magnetRange,fadeEnd] = (el.dataset.magnetRange || "0.2,0.1").split(',').map(n => Number(n));
