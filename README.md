@@ -164,9 +164,12 @@ that element the whole hand will get pulled towards it.
 
 Only set 1 `data-magnet` per hand. You can configure the magnetic elements by setting their data-magnet range e.g. `data-magnet-range="0.2,0.1"`. Where the first number is where the magnetism starts and the second the range at which the hand is totally moved to the destination location. In that example, which is the default it will start approaching from 0.2m and if the hand is within 0.1m it will be placed on the `#sword` handle.
 
-For physics systems it probably won't work well when you use magnet elements you probably want to use the real joint location, do declare that a joint should ignore magnet effects add `data-no-magnet` to it.
+For physics systems it probably won't work well when you use magnet elements you probably want to use the real joint location, do declare an additional that a joint should ignore magnet effects add `data-no-magnet` to it.
 
 The object currently attracting the controller will have it's ID noted on the `data-magnet` element as a `data-magnet-target` which you can read in JavaScript through the object's dataset.
+
+The magnet finding function always picks the first element it detects in it's range. Not the closest element. You can
+sort the order magnets are tested by setting the `data-magnet-priority` property on elements. The default value is `1` if you want it to be low priority set `data-magnet-priority="0"` or lower like `"-1"` fractions are fine too. If you want it to be higher priority set it to a higher number such as `data-magnet-priority="10"`. 
 
 ```html
 <!-- inside the handy-controls -->
@@ -185,23 +188,38 @@ The object currently attracting the controller will have it's ID noted on the `d
 
 <!-- In your camera rig -->
 <a-entity handy-controls="right:#right-gltf;materialOverride:right;" material="color:gold;metalness:1;roughness:0;">
+
+  <!-- Screen space inputs like mobile AR -->
+  <a-torus radius="0.008" radius-tubular="0.001" material="shader:flat;color:blue" data-none="screen-0"></a-torus>
+  <a-torus radius="0.008" radius-tubular="0.001" material="shader:flat;color:green" data-none="screen-1"></a-torus>
+  <a-torus radius="0.008" radius-tubular="0.001" material="shader:flat;color:red" data-none="screen-2"></a-torus>
+  
+  <!-- Objects attached to tracked hand joints -->
   <a-gltf-model src="#watch-gltf" data-left="wrist" position="-1000 0 0">
     <a-sphere radius="0.02" position="0 0.02 0" sphere-collider="radius:0.02;objects:[data-right$=-tip];" exit-on="hitend" visible="false"></a-sphere>
-    <a-entity position="0 0 -0.22" class="pose-label" text="value: Hello World; align: center;"></a-entity>
   </a-gltf-model>
-  <a-entity data-right="wrist">
-    <a-entity position="0 0 -0.22" class="pose-label" text="value: Hello World; align: center;"></a-entity>
-  </a-entity>
   <a-entity data-left="ring-finger-phalanx-proximal">
     <a-torus position="0 0 -0.03" radius="0.008" radius-tubular="0.001" scale="1 1 1.5" material="color:gold;metalness:1;roughness:0;"></a-torus>
   </a-entity>
   
   <a-entity data-right="index-finger-tip" mixin="blink" blink-controls="rotateOnTeleport:false;startEvents:pose_point_fuseShort;endEvents:pose_point_fuseLong;"></a-entity>
   <a-entity data-left="index-finger-tip"  mixin="blink" blink-controls="rotateOnTeleport:false;startEvents:pose_point_fuseShort;endEvents:pose_point_fuseLong;"></a-entity>
-
-  <a-entity data-right="grip">
-    <a-gltf-model src="#sword-gltf" scale="0.6,0.6,1"></a-gltf-model>
+  
+  <!-- Ray and Grip are Available on Hands or Tracked Inputs -->
+  <a-entity data-right="ray" mixin="blink" blink-controls>
+    <a-entity position="0 0 -0.22" class="pose-label" text="value: Hello World; align: center;"></a-entity>
   </a-entity>
+  <a-entity data-left="ray" mixin="blink" blink-controls>
+    <a-entity position="0 0 -0.22" class="pose-label" text="value: Hello World; align: center;"></a-entity>
+  </a-entity>
+
+  <!-- These act like anchors pulling both hands and controllers towards grabable objects, moving the whole hand and the attached elements-->
+  <a-entity id="right-magnet" data-right="grip" data-magnet=".magnet-right:not([data-no-magnet]),.magnet:not([data-no-magnet])" grab-magnet-target="startEvents:squeezestart,pose_fist;stopEvents:pose_flat_fuseShort,squeezeend;"></a-entity>
+  <a-entity id="left-magnet" data-left="grip"  data-magnet=".magnet-left:not([data-no-magnet]),.magnet:not([data-no-magnet])"  grab-magnet-target="startEvents:squeezestart,pose_fist;stopEvents:pose_flat_fuseShort,squeezeend;"></a-entity>
+
+  <!-- Markers to let us know the real location of the hands -->
+  <a-sphere id="right-no-magnet" data-right="grip" data-no-magnet radius="0.01" color="red"></a-sphere>
+  <a-sphere id="left-no-magnet" data-left="grip" data-no-magnet radius="0.01" color="red"></a-sphere>
   
   <!-- Invisible objects at the tips of each finger for physics or intersections -->
   <a-sphere data-right="index-finger-tip" radius="0.01" visible="false"></a-sphere>
