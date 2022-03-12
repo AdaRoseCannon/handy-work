@@ -702,7 +702,7 @@
   /* global AFRAME, THREE */
   const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles";
   const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "/generic-hand";
-  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "2.5.0" );
+  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "2.6.0" );
   const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
   const POSE_FOLDER = LIB_URL + "/poses/";
   const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));
@@ -782,9 +782,6 @@
     },
     init() {
       const sceneEl = this.el.sceneEl;
-
-      this.handyWorkCallback = this.handyWorkCallback.bind(this);
-      
       const webxrData = this.el.sceneEl.getAttribute('webxr');
       const optionalFeaturesArray = webxrData.optionalFeatures;
       if (!optionalFeaturesArray.includes('hand-tracking')) {
@@ -846,13 +843,20 @@
 
       this.elArrays = { left: [], right: [], none: [] };
       this.elMaps = { left: new Map(), right: new Map(), none: new Map() };
-      const observer = new MutationObserver((function observeFunction() {
+      this.magnetEls = new Map();
+      this.magnetQuerySelectors = new Map();
+      this.magnetTargets = new Map();
+
+      function reconstructElMaps() {
         for (const handedness of handednesses) {
           self.elArrays[handedness].splice(0);
           self.elMaps[handedness].clear();
+          self.magnetEls.clear();
+          self.magnetTargets.clear();
+          self.magnetQuerySelectors.clear();
         }
 
-        const els = Array.from(self.el.querySelectorAll(`[data-left],[data-right],[data-none]`));
+        const els = Array.from(self.el.children).filter(el=>el.dataset.left||el.dataset.right||el.dataset.none);
         for (const el of els) {
           for (const handedness of handednesses) {
             if (el.dataset[handedness] !== undefined) {
@@ -861,12 +865,55 @@
               const poseElArray = self.elMaps[handedness].get(poseName) || [];
               poseElArray.push(el);
               self.elMaps[handedness].set(poseName, poseElArray);
+
+              if (el.dataset.magnet) {
+                self.magnetEls.set(handedness, el);
+                self.magnetTargets.set(el, null);
+                self.magnetQuerySelectors.set(el, el.dataset.magnet);
+              }
             }
           }
         }
-        return observeFunction;
-      }.bind(this))());
-      observer.observe(this.el, { childList: true, attributes: true, subtree: true });
+      }
+      reconstructElMaps();
+      // if the children of this element change then rebuild the lists
+      new MutationObserver(reconstructElMaps).observe(this.el, { childList: true });
+      // If any of the hands change position rebuild it
+      new MutationObserver(function (changes) {
+        if (changes.find(change => (
+          change.attributeName === 'data-none' ||
+          change.attributeName === 'data-left' ||
+          change.attributeName === 'data-right')
+        )) reconstructElMaps();
+      }).observe(this.el, { attributes: true, subtree: true });
+
+      // if elements are changed check to make sure they are still in the magnet lists
+      new MutationObserver(function observeFunction(changes) {
+        for (const change of changes) {
+          for (const [el, qS] of self.magnetQuerySelectors) {
+            if (self.magnetTargets.get(el) === null) continue;
+            const isAlreadyMagnetic = self.magnetTargets.get(el).includes(change.target);
+            if (isAlreadyMagnetic !== change.target.matches(qS)) self.magnetTargets.set(el, null);
+          }
+        }
+      }).observe(this.el.sceneEl, { attributes: true, subtree: true });
+
+      // if elements are added or removed in the document then refresh all the magnet lists
+      new MutationObserver(function observeFunction() {
+        for (const [el] of self.magnetTargets) {
+          self.magnetTargets.set(el, null);
+        }
+      }).observe(this.el.sceneEl, { childList: true, subtree: true });
+    },
+
+    getMagnetTargets(el) {
+      const magnetTargets = this.magnetTargets.get(el);
+      if (magnetTargets === null) {
+        const magnetTargets = Array.from(document.querySelectorAll(this.magnetQuerySelectors.get(el))).sort((a,b)=>Number(b.dataset.magnetPriority || 1)-Number(a.dataset.magnetPriority || 1));
+        this.magnetTargets.set(el, magnetTargets);
+        return magnetTargets;
+      }
+      return magnetTargets;
     },
 
     async gltfToJoints(src, name) {
@@ -945,7 +992,8 @@
         const handedness = e.inputSource.handedness;
         const details = {
           inputSource,
-          handedness
+          handedness,
+          frame
         };
         if (!pose) return;
 
@@ -987,6 +1035,7 @@
     },
 
     tick() {
+      const self = this;
       const session = this.el.sceneEl.xrSession;
       if (!session) return;
       const renderer = this.el.sceneEl.renderer;
@@ -1003,7 +1052,7 @@
       inputSourceLoop:
       for (const inputSource of session.inputSources) {
         const inputSourceIndex = i++;
-        const magnetEl = this.el.querySelector(`[data-magnet][data-${inputSource.handedness}]`);
+        const magnetEl = this.magnetEls.get(inputSource.handedness);
         let magnetTarget = null;
         let fadeT = 1;
         let bones = [];
@@ -1116,7 +1165,7 @@
             axes: inputSource.gamepad.axes.slice(0)
           };
           if (old) {
-            const eventDetails = {handedness: inputSource.handedness, inputSource, data};
+            const eventDetails = {handedness: inputSource.handedness, inputSource, data, frame};
             data.buttons.forEach((value,i)=>{
               if (value !== old.buttons[i]) {
                 let name = controllerModel.gamepadMappings?.buttons[i] || `button${i}`;
@@ -1168,16 +1217,17 @@
           magnetEl.object3D.updateWorldMatrix(true, false);
           this.el.object3D.getWorldQuaternion(tempQuaternion_C).invert();
 
-          const magnetTargets = Array.from(document.querySelectorAll(magnetEl.dataset.magnet)).sort((a,b)=>Number(b.dataset.magnetPriority || 1)-Number(a.dataset.magnetPriority || 1));
           magnetEl.object3D.getWorldPosition(tempVector3_A);
-          for (const el of magnetTargets) {
+          for (const el of this.getMagnetTargets(magnetEl)) {
             const [magnetRange,fadeEnd] = (el.dataset.magnetRange || "0.2,0.1").split(',').map(n => Number(n));
             const d =  el.object3D.getWorldPosition(tempVector3_B).sub(tempVector3_A).length();
             if (d < magnetRange) {
               const Θ = (180/Math.PI) * el.object3D.getWorldQuaternion(tempQuaternion_A).premultiply(tempQuaternion_C).angleTo(magnetEl.object3D.quaternion);
-              if (Θ < 90) {
+              const angleRange = 120;
+              const angleEnd = angleRange*0.66;
+              if (Θ < angleRange) {
                 magnetTarget = el;
-                fadeT = invlerp(magnetRange,fadeEnd===undefined?magnetRange:fadeEnd,d) * invlerp(90,45,Θ);
+                fadeT = invlerp(magnetRange,fadeEnd===undefined?magnetRange:fadeEnd,d) * invlerp(angleRange,angleEnd,Θ);
                 break;
               }
             }
@@ -1223,19 +1273,19 @@
           toUpdate,
           referenceSpace,
           frame,
-          this.handyWorkCallback
+          function ({
+            distances, handedness
+          }) {
+            self.emitHandpose(distances[0][0], handedness, {
+              pose: distances[0][0],
+              poses: distances,
+              handedness,
+              frame
+            });
+          }
         );
       }
     },
-    handyWorkCallback: function ({
-  		distances, handedness
-  	}) {
-  		this.emitHandpose(distances[0][0], handedness, {
-        pose: distances[0][0],
-        poses: distances,
-        handedness
-      });
-  	},
     emitGamepad (els, name, details) {
       details.event = name;
       for (const el of els) {
@@ -1245,7 +1295,7 @@
     },
     emitHandpose(name, handedness, details) {
       if (name === this[handedness + '_currentPose']) return;
-      const els = Array.from(this.el.querySelectorAll(`[data-${handedness}]`));
+      const els = this.elArrays[handedness];
       
       clearTimeout(this[handedness + '_vshortTimeout']);
       clearTimeout(this[handedness + '_shortTimeout']);
