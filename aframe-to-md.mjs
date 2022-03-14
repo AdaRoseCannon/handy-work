@@ -14,7 +14,7 @@ function processSchema(obj, property) {
 	if (property) out.property = property;
 	out.type = obj.type || typeof obj.default;
 	out.description = obj.description || "";
-	if (obj.oneOf) obj.description += ` One of ${out.oneOf.toString()}`;
+	if (obj.oneOf) obj.description += ` One of ${obj.oneOf.toString()}`;
 	if (typeof obj.default === 'object' || typeof obj.default === 'string') {
 		out.default = JSON.stringify(obj.default);
 	} else {
