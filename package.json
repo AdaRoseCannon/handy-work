@@ -8,22 +8,23 @@
   "scripts": {
     "start": "npm run build && node ./",
     "docs1": "awk '\n BEGIN {p=1}\n /^<!--DOCS-->/ {print;system(\"npx jsdoc-to-markdown ./src/handy-work.js\");p=0}\n /^<!--DOCS_END-->/ {p=1}\n p' README.md > ~README.md && mv ~README.md README.md",
-    "docs2": "awk '\n BEGIN {p=1}\n /^<!--SCHEMA-->/ {print;system(\"node ./aframe-to-md.mjs ./build/handy-controls.min.js\");p=0}\n /^<!--SCHEMA_END-->/ {p=1}\n p' README.md > ~README.md && mv ~README.md README.md",
-    "docs": "npm run docs1 && npm run docs2;",
-    "build": "rollup -c && rollup -c ./rollup-aframe.config.js && rollup -c && rollup -c ./rollup-aframe-min.config.js && rollup -c ./rollup-standalone.config.js && rollup -f cjs ./build/esm/handy-work.standalone.js -o ./build/cjs/handy-work.standalone.js && rollup -c -p rollup-plugin-terser && find build -maxdepth 2 -iname \"*.js\" -not -type d -exec du -h {} \\;;npm run docs",
+    "docs2": "awk '\n BEGIN {p=1}\n /^<!--SCHEMA-->/ {print;system(\"node ./aframe-to-md.mjs ./build/handy-controls.min.js\");p=0}\n /^<!--SCHEMA_END-->/ {p=1}\n p' README-AFRAME.md > ~README-AFRAME.md && mv ~README-AFRAME.md README-AFRAME.md",
+    "docs3": "awk '\n BEGIN {p=1}\n /^<!--SCHEMA2-->/ {print;system(\"node ./aframe-to-md.mjs ./src/magnet-helpers.js\");p=0}\n /^<!--SCHEMA2_END-->/ {p=1}\n p' README-AFRAME.md > ~README-AFRAME.md && mv ~README-AFRAME.md README-AFRAME.md",
+    "docs": "npm run docs1 && npm run docs2 && npm run docs3;",
+    "build": "rollup -c && rollup -c ./rollup-aframe.config.js && rollup -c ./rollup-standalone.config.js && rollup -f cjs ./build/esm/handy-work.standalone.js -o ./build/cjs/handy-work.standalone.js && rollup -c -p rollup-plugin-terser && find build -maxdepth 2 -iname \"*.js\" -not -type d -exec du -h {} \\;;npm run docs",
     "develop": "rollup -w -c",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "tablemark": "^3.0.0",
     "@babel/core": "^7.17.2",
     "@babel/eslint-parser": "^7.17.0",
     "@babel/preset-env": "^7.16.11",
     "@rollup/plugin-alias": "^3.1.9",
     "@rollup/plugin-node-resolve": "^13.1.3",
     "@rollup/plugin-replace": "^3.1.0",
+    "@rollup/plugin-strip": "^2.1.0",
     "@surma/rollup-plugin-comlink": "^0.4.0",
     "@surma/rollup-plugin-off-main-thread": "^2.2.3",
     "comlink": "^4.3.1",
@@ -35,6 +36,7 @@
     "rollup-plugin-delete": "^2.0.0",
     "rollup-plugin-serve": "^1.1.0",
     "rollup-plugin-terser": "^7.0.2",
+    "tablemark": "^3.0.0",
     "three": "^0.137.5"
   }
 }

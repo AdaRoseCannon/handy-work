@@ -18,6 +18,9 @@ global.AFRAME= {
 			out.property = property;
 			Object.assign(out, obj);
 			out.type = out.type || typeof out.default;
+			if (typeof out.default === 'object') {
+				out.default = JSON.stringify(out.default);
+			}
 			out.description = out.description || "";
 			if (out.oneOf) out.description += ` One of ${out.oneOf.toString()}`;
 			table.push(out);

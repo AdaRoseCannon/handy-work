@@ -145,7 +145,6 @@ AFRAME.registerComponent("handy-controls", {
     this.elArrays = { left: [], right: [], none: [] };
     this.elMaps = { left: new Map(), right: new Map(), none: new Map() };
     this.magnetEls = new Map();
-    this.magnetQuerySelectors = new Map();
     this.magnetTargets = new Map();
 
     function reconstructElMaps() {
@@ -154,7 +153,6 @@ AFRAME.registerComponent("handy-controls", {
         self.elMaps[handedness].clear();
         self.magnetEls.clear();
         self.magnetTargets.clear();
-        self.magnetQuerySelectors.clear();
       }
 
       const els = Array.from(self.el.children).filter(el=>el.dataset.left||el.dataset.right||el.dataset.none);
@@ -170,7 +168,6 @@ AFRAME.registerComponent("handy-controls", {
             if (el.dataset.magnet) {
               self.magnetEls.set(handedness, el);
               self.magnetTargets.set(el, null);
-              self.magnetQuerySelectors.set(el, el.dataset.magnet);
             }
           }
         }
@@ -184,33 +181,16 @@ AFRAME.registerComponent("handy-controls", {
       if (changes.find(change => (
         change.attributeName === 'data-none' ||
         change.attributeName === 'data-left' ||
-        change.attributeName === 'data-right')
-      )) reconstructElMaps();
+        change.attributeName === 'data-right' ||
+        change.attributeName === 'data-magnet'
+      ))) reconstructElMaps();
     }).observe(this.el, { attributes: true, subtree: true });
-
-    // if elements are changed check to make sure they are still in the magnet lists
-    new MutationObserver(function observeFunction(changes) {
-      for (const change of changes) {
-        for (const [el, qS] of self.magnetQuerySelectors) {
-          if (self.magnetTargets.get(el) === null) continue;
-          const isAlreadyMagnetic = self.magnetTargets.get(el).includes(change.target);
-          if (isAlreadyMagnetic !== change.target.matches(qS)) self.magnetTargets.set(el, null);
-        }
-      }
-    }).observe(this.el.sceneEl, { attributes: true, subtree: true });
-
-    // if elements are added or removed in the document then refresh all the magnet lists
-    new MutationObserver(function observeFunction() {
-      for (const [el] of self.magnetTargets) {
-        self.magnetTargets.set(el, null);
-      }
-    }).observe(this.el.sceneEl, { childList: true, subtree: true });
   },
 
   getMagnetTargets(el) {
     const magnetTargets = this.magnetTargets.get(el);
     if (magnetTargets === null) {
-      const magnetTargets = Array.from(document.querySelectorAll(this.magnetQuerySelectors.get(el))).sort((a,b)=>Number(b.dataset.magnetPriority || 1)-Number(a.dataset.magnetPriority || 1));
+      const magnetTargets = document.getElementsByClassName(el.dataset.magnet);
       this.magnetTargets.set(el, magnetTargets);
       return magnetTargets;
     }
@@ -520,15 +500,19 @@ AFRAME.registerComponent("handy-controls", {
 
         magnetEl.object3D.getWorldPosition(tempVector3_A);
         for (const el of this.getMagnetTargets(magnetEl)) {
-          const [magnetRange,fadeEnd] = (el.dataset.magnetRange || "0.2,0.1").split(',').map(n => Number(n));
+          let magnetRange,fadeEnd,angleRange,angleEnd;
+          const magnetRangeData = el.dataset.magnetRange;
+          if (magnetRangeData) [magnetRange,fadeEnd,angleRange,angleEnd] = magnetRangeData.split(',').map(n => Number(n));
+          magnetRange = magnetRange || 0.2;
+          fadeEnd = fadeEnd === undefined ? 0.1 : fadeEnd;
+          angleRange = angleRange || 120;
+          angleEnd = angleEnd === undefined ? 80 : angleEnd;
           const d =  el.object3D.getWorldPosition(tempVector3_B).sub(tempVector3_A).length();
           if (d < magnetRange) {
             const Θ = (180/Math.PI) * el.object3D.getWorldQuaternion(tempQuaternion_A).premultiply(tempQuaternion_C).angleTo(magnetEl.object3D.quaternion);
-            const angleRange = 120;
-            const angleEnd = angleRange*0.66;
             if (Θ < angleRange) {
               magnetTarget = el;
-              fadeT = invlerp(magnetRange,fadeEnd===undefined?magnetRange:fadeEnd,d) * invlerp(angleRange,angleEnd,Θ);
+              fadeT = invlerp(magnetRange,fadeEnd,d) * invlerp(angleRange,angleEnd,Θ);
               break;
             }
           }
