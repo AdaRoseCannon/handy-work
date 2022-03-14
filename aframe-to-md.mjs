@@ -12,13 +12,14 @@ const handler = {
 function processSchema(obj, property) {
 	const out = {};
 	if (property) out.property = property;
-	Object.assign(out, obj);
-	out.type = out.type || typeof out.default;
-	if (typeof out.default === 'object') {
-		out.default = JSON.stringify(out.default);
+	out.type = obj.type || typeof obj.default;
+	out.description = obj.description || "";
+	if (obj.oneOf) obj.description += ` One of ${out.oneOf.toString()}`;
+	if (typeof obj.default === 'object' || typeof obj.default === 'string') {
+		out.default = JSON.stringify(obj.default);
+	} else {
+		out.default = obj.default;
 	}
-	out.description = out.description || "";
-	if (out.oneOf) out.description += ` One of ${out.oneOf.toString()}`;
 	return out;
 }
 
