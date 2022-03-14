@@ -20,15 +20,15 @@ Vector3
 Quaternion
 Quaternion
 Quaternion
-| Property         | One of                    | Default                                                                                        | Description                                                                                                                                                                                                              | Type   |
-| :--------------- | :------------------------ | :--------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----- |
-| renderGamepad    | any,left,right,none,never | any                                                                                            | Whether to render a gamepad model when it's not doing hand tracking, right, none and left are the names of controller handedness, any is all of them, and never is to not draw gamepads One of any,left,right,none,never | string |
-| left             |                           | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles/generic-hand/left.glb  | URL for left controller                                                                                                                                                                                                  | model  |
-| right            |                           | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles/generic-hand/right.glb | URL for right controller                                                                                                                                                                                                 | model  |
-| materialOverride | both,left,right,neither   | both                                                                                           | Which hand to use the `material` component for One of both,left,right,neither                                                                                                                                            | string |
-| fuseVShort       |                           | 48                                                                                             | Time for a pose to trigger a pose event (ms)                                                                                                                                                                             | number |
-| fuseShort        |                           | 480                                                                                            | Time for a pose to trigger a pose_fuseShort event (ms)                                                                                                                                                                   | number |
-| fuseLong         |                           | 1440                                                                                           | Time for a pose to trigger a pose_fuseLong event (ms)                                                                                                                                                                    | number |
+| One of                    | Default                                                                                        | Description                                                                                                                                                                                                              | Type   | Property         |
+| :------------------------ | :--------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----- | :--------------- |
+| any,left,right,none,never | any                                                                                            | Whether to render a gamepad model when it's not doing hand tracking, right, none and left are the names of controller handedness, any is all of them, and never is to not draw gamepads One of any,left,right,none,never | string | renderGamepad    |
+|                           | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles/generic-hand/left.glb  | URL for left controller                                                                                                                                                                                                  | model  | left             |
+|                           | https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles/generic-hand/right.glb | URL for right controller                                                                                                                                                                                                 | model  | right            |
+| both,left,right,neither   | both                                                                                           | Which hand to use the `material` component for One of both,left,right,neither                                                                                                                                            | string | materialOverride |
+|                           | 48                                                                                             | Time for a pose to trigger a pose event (ms)                                                                                                                                                                             | number | fuseVShort       |
+|                           | 480                                                                                            | Time for a pose to trigger a pose_fuseShort event (ms)                                                                                                                                                                   | number | fuseShort        |
+|                           | 1440                                                                                           | Time for a pose to trigger a pose_fuseLong event (ms)                                                                                                                                                                    | number | fuseLong         |
 
 <!--SCHEMA_END-->
 
@@ -198,14 +198,14 @@ of the object when this component is first run.
 This is useful for creating magnetic lines. Put linear-constraint on a magnetic element and set it's target
 to the **non-magnet** version of the hand element with the data-magnet property. i.e. the same part but with `data-no-magnet`
 
-| Property | Type     | Description                                                                        | Default              |
-| :------- | :------- | :--------------------------------------------------------------------------------- | :------------------- |
-| axis     | vec3     | Axis upon which the element is constrained, does not need to be normalized.        | {"x":0,"y":0,"z":-1} |
-| max      | number   | How far can it travel along the axis                                               | Infinity             |
-| min      | number   | How far can it travel opposite to the axis                                         | -Infinity            |
-| target   | selector | Element it should try to follow                                                    |                      |
-| part     | string   | If applied to a 3D model this is the name of the part that should be used instead. |                      |
-| enabled  | boolean  | Whether it should currently run or not                                             | true                 |
+| Type     | Description                                                                        | Default              | Property |
+| :------- | :--------------------------------------------------------------------------------- | :------------------- | :------- |
+| vec3     | Axis upon which the element is constrained, does not need to be normalized.        | {"x":0,"y":0,"z":-1} | axis     |
+| number   | How far can it travel along the axis                                               | Infinity             | max      |
+| number   | How far can it travel opposite to the axis                                         | -Infinity            | min      |
+| selector | Element it should try to follow                                                    |                      | target   |
+| string   | If applied to a 3D model this is the name of the part that should be used instead. |                      | part     |
+| boolean  | Whether it should currently run or not                                             | true                 | enabled  |
 
 ### attach-to-model
 
@@ -213,10 +213,9 @@ Each frame attach-to-model will move an object to the same position as part of t
 
 This is useful for attaching magnetic elements to moving elements of a 3D model so it can be grabbed in different ways.
 
-| 0     | 1     | 2     | 3     | 4     | 5     | 6     | 7     | 8     | 9     | 10    | 11    | 12    | 13    | 14    | 15    | 16    | 17    | 18    | 19    | 20    | 21    | Property    | Type      | Description |
-| :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---------- | :-------- | :---------- |
-| N     | a     | m     | e     |       | o     | f     |       | p     | a     | r     | t     |       | t     | o     |       | f     | o     | l     | l     | o     | w     | description | undefined |             |
-|       |       |       |       |       |       |       |       |       |       |       |       |       |       |       |       |       |       |       |       |       |       | default     | undefined |             |
+| Description            | Default | Type   |
+| :--------------------- | :------ | :----- |
+| Name of part to follow |         | string |
 
 ### grab-magnet-target
 
@@ -240,9 +239,9 @@ Finally the "released" event is fired on whatever was being held.
 
 Quaternion
 Vector3
-| Property    | Type  | Description             |
-| :---------- | :---- | :---------------------- |
-| startEvents | array | Event to start grabbing |
-| stopEvents  | array | Event to stop grabbing  |
+| Type  | Description             | Property    |
+| :---- | :---------------------- | :---------- |
+| array | Event to start grabbing | startEvents |
+| array | Event to stop grabbing  | stopEvents  |
 
 <!--SCHEMA2_END-->
