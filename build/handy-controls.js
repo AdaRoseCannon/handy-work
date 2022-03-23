@@ -688,7 +688,7 @@
   /* global AFRAME, THREE */
   const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles";
   const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "/generic-hand";
-  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "2.7.0" );
+  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "3.0.0" );
   const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
   const POSE_FOLDER = LIB_URL + "/poses/";
   const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));
@@ -1007,10 +1007,6 @@
       const toUpdate = [];
       const frame = this.el.sceneEl.frame;
 
-      for (const el of this.el.children){
-        el.object3D.visible = false;
-      }
-
       let i=0;
       let transientSourceIndex = 0;
       inputSourceLoop:
@@ -1042,17 +1038,13 @@
             toMagnet.push(bone);
             if (joint) {
 
-              // Keep hand elements visible even when tracking is lost
-              if (handMesh.visible) {
-                if (elMap.has(bone.jointName)) {
+              const pose = frame.getJointPose(joint, referenceSpace);
+              if (pose) {
+                if (handMesh.visible === false || elMap.has(bone.jointName)) {
                   for (const el of elMap.get(bone.jointName)) {
                     el.object3D.visible = (el.getDOMAttribute('visible') !== false);
                   }
                 }
-              }
-
-              const pose = frame.getJointPose(joint, referenceSpace);
-              if (pose) {
                 handMesh.visible = true;
                 if (elMap.has(bone.jointName)) {
                   for (const el of elMap.get(bone.jointName)) {
@@ -1072,6 +1064,10 @@
           }
         } else if (handMesh)  {
           handMesh.visible = false;
+
+          for (const el of this.el.children){
+            el.object3D.visible = false;
+          }
         }
 
         if (inputSource.targetRayMode === "screen") {

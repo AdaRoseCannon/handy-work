@@ -324,10 +324,6 @@ AFRAME.registerComponent("handy-controls", {
     const toUpdate = [];
     const frame = this.el.sceneEl.frame;
 
-    for (const el of this.el.children){
-      el.object3D.visible = false;
-    }
-
     let i=0;
     let transientSourceIndex = 0;
     inputSourceLoop:
@@ -359,17 +355,13 @@ AFRAME.registerComponent("handy-controls", {
           toMagnet.push(bone);
           if (joint) {
 
-            // Keep hand elements visible even when tracking is lost
-            if (handMesh.visible) {
-              if (elMap.has(bone.jointName)) {
+            const pose = frame.getJointPose(joint, referenceSpace);
+            if (pose) {
+              if (handMesh.visible === false || elMap.has(bone.jointName)) {
                 for (const el of elMap.get(bone.jointName)) {
                   el.object3D.visible = (el.getDOMAttribute('visible') !== false);
                 }
               }
-            }
-
-            const pose = frame.getJointPose(joint, referenceSpace);
-            if (pose) {
               handMesh.visible = true;
               if (elMap.has(bone.jointName)) {
                 for (const el of elMap.get(bone.jointName)) {
@@ -389,6 +381,10 @@ AFRAME.registerComponent("handy-controls", {
         }
       } else if (handMesh)  {
         handMesh.visible = false;
+
+        for (const el of this.el.children){
+          el.object3D.visible = false;
+        }
       }
 
       if (inputSource.targetRayMode === "screen") {
