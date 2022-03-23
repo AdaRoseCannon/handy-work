@@ -357,7 +357,7 @@ AFRAME.registerComponent("handy-controls", {
 
             const pose = frame.getJointPose(joint, referenceSpace);
             if (pose) {
-              if (handMesh.visible === false || elMap.has(bone.jointName)) {
+              if (handMesh.visible === false && elMap.has(bone.jointName)) {
                 for (const el of elMap.get(bone.jointName)) {
                   el.object3D.visible = (el.getDOMAttribute('visible') !== false);
                 }
