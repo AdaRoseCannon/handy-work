@@ -688,7 +688,7 @@
   /* global AFRAME, THREE */
   const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles";
   const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "/generic-hand";
-  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "3.0.1" );
+  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "3.0.2" );
   const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
   const POSE_FOLDER = LIB_URL + "/poses/";
   const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));

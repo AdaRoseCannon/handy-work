@@ -203,6 +203,7 @@ to the **non-magnet** version of the hand element with the data-magnet property.
 | axis     | vec3     | Axis upon which the element is constrained, does not need to be normalized.        | {"x":0,"y":0,"z":-1} |
 | max      | number   | How far can it travel along the axis                                               | Infinity             |
 | min      | number   | How far can it travel opposite to the axis                                         | -Infinity            |
+| step     | number   | Steps it should take from the origin.                                              | 0                    |
 | target   | selector | Element it should try to follow                                                    |                      |
 | part     | string   | If applied to a 3D model this is the name of the part that should be used instead. | ""                   |
 | enabled  | boolean  | Whether it should currently run or not                                             | true                 |

@@ -32,6 +32,10 @@ to the **non-magnet** version of the hand element with the data-magnet property.
 				description: `How far can it travel opposite to the axis`,
 				default: -Infinity
 			},
+			step: {
+				description: "Steps it should take from the origin.",
+				default: 0
+			},
 			target: {
 				description: `Element it should try to follow`,
 				type: 'selector'
@@ -58,6 +62,7 @@ to the **non-magnet** version of the hand element with the data-magnet property.
 		tick() {
 			if (!this.data.enabled || !this.data.target) return;
 			const object3D = this.data.part ? this.part : this.el.object3D;
+			const step = this.data.step;
 			if (!object3D) return;
 			if (!this.originalOffset) this.originalOffset = new THREE.Vector3().copy(object3D.position);
 			const n = this.n;
@@ -71,7 +76,8 @@ to the **non-magnet** version of the hand element with the data-magnet property.
 			// Sub in vector equation p=tn
 			// t * n.x * n.x + t * n.y * n.y + t * n.z * n.z = p0.n
 			// equivalent to  t * n.length() = p0.n
-			const t = clamp(p0.dot(n) / n.length(), this.data.min, this.data.max);
+			let t = clamp(p0.dot(n) / n.length(), this.data.min, this.data.max);
+			if (step) t = step*Math.round(t/step);
 			object3D.position.copy(n).multiplyScalar(t).add(this.originalOffset);
 		}
 	});
