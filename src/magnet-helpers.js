@@ -140,6 +140,10 @@ AFRAME.registerComponent("grab-magnet-target", {
 		stopEvents: {
 			type: 'array',
 			description: 'Event to stop grabbing'
+		},
+		noMagnetEl: {
+			type: 'selector',
+			description: 'The version of the grip with no magnet providing it helps physics things.',
 		}
 	},
 	init() {
@@ -204,9 +208,9 @@ AFRAME.registerComponent("grab-magnet-target", {
 					el.object3D.applyQuaternion(tempQuaternion);
 					el.object3D.position.sub(tempVector3);
 				}
-				el.emit('pickup', Object.assign({ by: this.el }, e && e.detail));
+				el.emit('pickup', Object.assign({ by: this.el, byNoMagnet: this.data.noMagnetEl }, e && e.detail));
 			}
-			el.emit('grabbed', Object.assign({ by: this.el }, e && e.detail));
+			el.emit('grabbed', Object.assign({ by: this.el, byNoMagnet: this.data.noMagnetEl }, e && e.detail));
 		}
 	},
 	grabEnd(e) {
@@ -229,12 +233,12 @@ AFRAME.registerComponent("grab-magnet-target", {
 				}
 				this.oldParent.add(el);
 				this.oldParent = null;
-				el.emit('putdown', Object.assign({ by: this.el }, e && e.detail));
+				el.emit('putdown', Object.assign({ by: this.el, byNoMagnet: this.data.noMagnetEl }, e && e.detail));
 			}
 			this.isGrabbing = false;
 			this.grabbedEl = null;
 			this.targetEl = null;
-			el.emit('released', Object.assign({ by: this.el }, e && e.detail));
+			el.emit('released', Object.assign({ by: this.el, byNoMagnet: this.data.noMagnetEl }, e && e.detail));
 		}
 	},
 	tick() {

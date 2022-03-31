@@ -240,9 +240,10 @@ Finally the "released" event is fired on whatever was being held.
 
 Quaternion
 Vector3
-| Property    | Type  | Description             | Default |
-| :---------- | :---- | :---------------------- | :------ |
-| startEvents | array | Event to start grabbing |         |
-| stopEvents  | array | Event to stop grabbing  |         |
+| Property    | Type     | Description                                                               | Default |
+| :---------- | :------- | :------------------------------------------------------------------------ | :------ |
+| startEvents | array    | Event to start grabbing                                                   |         |
+| stopEvents  | array    | Event to stop grabbing                                                    |         |
+| noMagnetEl  | selector | The version of the grip with no magnet providing it helps physics things. |         |
 
 <!--SCHEMA2_END-->
