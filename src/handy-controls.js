@@ -382,7 +382,7 @@ AFRAME.registerComponent("handy-controls", {
       } else if (handMesh)  {
         handMesh.visible = false;
 
-        for (const el of this.el.children){
+        for (const el of allEls){
           el.object3D.visible = false;
         }
       }
@@ -404,14 +404,18 @@ AFRAME.registerComponent("handy-controls", {
       }
 
       // handle any tracked elements attached to the ray space of the input source this works for any types
-      for (const [name, inputSourcePose] of [['ray', inputSource.targetRaySpace],['grip', inputSource.gripSpace]]) {
+      for (const [name, inputSourcePose] of [
+        ['ray', inputSource.targetRaySpace],
+        ['grip', inputSource.gripSpace]
+      ]) {
         if (elMap.has(name) && inputSourcePose) {
           const pose = frame.getPose(inputSourcePose, referenceSpace);
           if (pose) {
             for (const el of elMap.get(name)) {
               el.object3D.position.copy(pose.transform.position);
               el.object3D.quaternion.copy(pose.transform.orientation);
-              el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+              const elShouldBeVisible = (el.getDOMAttribute('visible') !== false)
+              el.object3D.visible = elShouldBeVisible;
               if (el.dataset.noMagnet === undefined) toMagnet.push(el.object3D);
             }
           }
