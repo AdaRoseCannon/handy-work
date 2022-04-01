@@ -83,7 +83,7 @@ to the **non-magnet** version of the hand element with the data-magnet property.
 			let t = clamp(p0.dot(n) / n.length(), this.data.min, this.data.max);
 			if (step) t = step*Math.round(t/step);
 			
-			const r = p0.addScaledVector(n ,-t).sub(this.originalOffset).length();
+			const r = p0.addScaledVector(n ,-t).length();
 			if (r < this.data.radius) object3D.position.copy(n).multiplyScalar(t).add(this.originalOffset);
 		}
 	});
