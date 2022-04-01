@@ -32,6 +32,10 @@ to the **non-magnet** version of the hand element with the data-magnet property.
 				description: `How far can it travel opposite to the axis`,
 				default: -Infinity
 			},
+			radius: {
+				description: 'Outside this distance it will not work',
+				default: Infinity
+			},
 			step: {
 				description: "Steps it should take from the origin.",
 				default: 0
@@ -78,7 +82,9 @@ to the **non-magnet** version of the hand element with the data-magnet property.
 			// equivalent to  t * n.length() = p0.n
 			let t = clamp(p0.dot(n) / n.length(), this.data.min, this.data.max);
 			if (step) t = step*Math.round(t/step);
-			object3D.position.copy(n).multiplyScalar(t).add(this.originalOffset);
+			
+			const r = p0.addScaledVector(n ,-t).sub(this.originalOffset).length();
+			if (r < this.data.radius) object3D.position.copy(n).multiplyScalar(t).add(this.originalOffset);
 		}
 	});
 
