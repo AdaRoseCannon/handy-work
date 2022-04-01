@@ -34,6 +34,14 @@ AFRAME.registerComponent('linear-constraint', {
 			description: 'Outside this distance it will not work',
 			default: Infinity
 		},
+		useFixedValueIfOutOfRange: {
+			description: 'Should the object remain at a fixed position if out of the radius.',
+			default: false
+		},
+		valueIfOutOfRange: {
+			description: 'Value the object should be set to if out of the radius',
+			default: 0
+		},
 		step: {
 			description: "Steps it should take from the origin.",
 			default: 0
@@ -82,7 +90,11 @@ AFRAME.registerComponent('linear-constraint', {
 		if (step) t = step*Math.round(t/step);
 		
 		const r = p0.addScaledVector(n ,-t).length();
-		if (r < this.data.radius) object3D.position.copy(n).multiplyScalar(t).add(this.originalOffset);
+		if (r < this.data.radius) {
+			object3D.position.copy(n).multiplyScalar(t).add(this.originalOffset);
+		} else if (this.data.useFixedValueIfOutOfRange) {
+			object3D.position.copy(n).multiplyScalar(this.data.valueIfOutOfRange).add(this.originalOffset);
+		}
 	}
 });
 
