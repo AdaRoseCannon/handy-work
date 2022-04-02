@@ -14,6 +14,8 @@ This is useful for creating magnetic lines. Put linear-constraint on a magnetic 
 to the **non-magnet** version of the hand element with the data-magnet property. i.e. the same part but with \`data-no-magnet\`
 `);
 
+const tempVec3A = new THREE.Vector3();
+const tempVec3B = new THREE.Vector3();
 const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
 AFRAME.registerComponent('linear-constraint', {
 	schema: {
@@ -48,7 +50,7 @@ AFRAME.registerComponent('linear-constraint', {
 		},
 		target: {
 			description: `Element it should try to follow`,
-			type: 'selector'
+			type: 'selectorAll'
 		},
 		part: {
 			description: `If applied to a 3D model this is the name of the part that should be used instead.`,
@@ -57,12 +59,28 @@ AFRAME.registerComponent('linear-constraint', {
 		enabled: {
 			description: `Whether it should currently run or not`,
 			default: true
+		},
+		upEventName: {
+			description: `Name of event to trigger when t is increasing`,
+			default: ''
+		},
+		upEventThreshold: {
+			description: `Threshold to trigger up event`,
+			default: 0
+		},
+		downEventName: {
+			description: `Name of event to trigger when t is decreasing`,
+			default: ''
+		},
+		downEventThreshold: {
+			description: `Threshold to trigger up event`,
+			default: 0
 		}
 	},
 	init() {
-		this.tempVec3 = new THREE.Vector3();
 		this.n = new THREE.Vector3();
 		this.el.addEventListener('object3dset', this.update.bind(this));
+		this.oldT = null;
 	},
 	update() {
 		// Ensure the axis is normalized
@@ -70,16 +88,28 @@ AFRAME.registerComponent('linear-constraint', {
 		if (this.data.part) this.part = this.el.object3D.getObjectByName(this.data.part);
 	},
 	tick() {
-		if (!this.data.enabled || !this.data.target) return;
+		if (!this.data.enabled || !this.data.target || this.data.target.length === 0 ) return;
 		const object3D = this.data.part ? this.part : this.el.object3D;
 		const step = this.data.step;
 		if (!object3D) return;
 		if (!this.originalOffset) this.originalOffset = new THREE.Vector3().copy(object3D.position);
 		const n = this.n;
-		const p0 = this.tempVec3;
-		this.data.target.object3D.getWorldPosition(p0);
-		object3D.parent.worldToLocal(p0);
-		p0.sub(this.originalOffset);
+		const p0 = tempVec3A;
+
+		// For the case of multiple targets pick the closest point.
+		let closestD = Infinity;
+		const testPoint = tempVec3B;
+		for (const target of this.data.target) {
+			target.object3D.getWorldPosition(testPoint);
+			object3D.parent.worldToLocal(testPoint);
+			testPoint.sub(this.originalOffset);
+			const distance = testPoint.length();
+			if (distance < closestD) {
+				closestD = distance;
+				p0.copy(testPoint);
+			}
+		}
+
 		// We have a plane with normal n that contains p0
 		// We want to place the object where a vector n from the origin intersects the plane
 		// n.x x + n.y y + n.z z = p0.n
@@ -88,13 +118,37 @@ AFRAME.registerComponent('linear-constraint', {
 		// equivalent to  t * n.length() = p0.n
 		let t = clamp(p0.dot(n) / n.length(), this.data.min, this.data.max);
 		if (step) t = step*Math.round(t/step);
-		
 		const r = p0.addScaledVector(n ,-t).length();
-		if (r < this.data.radius) {
-			object3D.position.copy(n).multiplyScalar(t).add(this.originalOffset);
-		} else if (this.data.useFixedValueIfOutOfRange) {
-			object3D.position.copy(n).multiplyScalar(this.data.valueIfOutOfRange).add(this.originalOffset);
+		if (r > this.data.radius) {
+			if (this.data.useFixedValueIfOutOfRange) {
+				t = this.data.valueIfOutOfRange;
+			} else {
+
+				// Out of range so just stop.
+				return;
+			}
 		}
+
+		if (this.oldT !== null) {
+			if (
+				this.data.upEventName &&
+				t >= this.data.upEventThreshold &&
+				this.oldT < this.data.upEventThreshold
+			) {
+				this.el.emit(this.data.upEventName);
+			}
+			
+			if (
+				this.data.downEventName &&
+				t <= this.data.downEventThreshold &&
+				this.oldT > this.data.downEventThreshold
+			) {
+				this.el.emit(this.data.downEventName);
+			}
+		}
+		
+		object3D.position.copy(n).multiplyScalar(t).add(this.originalOffset);
+		this.oldT = t;
 	}
 });
 

@@ -198,18 +198,24 @@ of the object when this component is first run.
 This is useful for creating magnetic lines. Put linear-constraint on a magnetic element and set it's target
 to the **non-magnet** version of the hand element with the data-magnet property. i.e. the same part but with `data-no-magnet`
 
-| Property                  | Type     | Description                                                                        | Default              |
-| :------------------------ | :------- | :--------------------------------------------------------------------------------- | :------------------- |
-| axis                      | vec3     | Axis upon which the element is constrained, does not need to be normalized.        | {"x":0,"y":0,"z":-1} |
-| max                       | number   | How far can it travel along the axis                                               | Infinity             |
-| min                       | number   | How far can it travel opposite to the axis                                         | -Infinity            |
-| radius                    | number   | Outside this distance it will not work                                             | Infinity             |
-| useFixedValueIfOutOfRange | boolean  | Should the object remain at a fixed position if out of the radius.                 | false                |
-| valueIfOutOfRange         | number   | Value the object should be set to if out of the radius                             | 0                    |
-| step                      | number   | Steps it should take from the origin.                                              | 0                    |
-| target                    | selector | Element it should try to follow                                                    |                      |
-| part                      | string   | If applied to a 3D model this is the name of the part that should be used instead. | ""                   |
-| enabled                   | boolean  | Whether it should currently run or not                                             | true                 |
+Vector3
+Vector3
+| Property                  | Type        | Description                                                                        | Default              |
+| :------------------------ | :---------- | :--------------------------------------------------------------------------------- | :------------------- |
+| axis                      | vec3        | Axis upon which the element is constrained, does not need to be normalized.        | {"x":0,"y":0,"z":-1} |
+| max                       | number      | How far can it travel along the axis                                               | Infinity             |
+| min                       | number      | How far can it travel opposite to the axis                                         | -Infinity            |
+| radius                    | number      | Outside this distance it will not work                                             | Infinity             |
+| useFixedValueIfOutOfRange | boolean     | Should the object remain at a fixed position if out of the radius.                 | false                |
+| valueIfOutOfRange         | number      | Value the object should be set to if out of the radius                             | 0                    |
+| step                      | number      | Steps it should take from the origin.                                              | 0                    |
+| target                    | selectorAll | Element it should try to follow                                                    |                      |
+| part                      | string      | If applied to a 3D model this is the name of the part that should be used instead. | ""                   |
+| enabled                   | boolean     | Whether it should currently run or not                                             | true                 |
+| upEventName               | string      | Name of event to trigger when t is increasing                                      | ""                   |
+| upEventThreshold          | number      | Threshold to trigger up event                                                      | 0                    |
+| downEventName             | string      | Name of event to trigger when t is decreasing                                      | ""                   |
+| downEventThreshold        | number      | Threshold to trigger up event                                                      | 0                    |
 
 ### attach-to-model
 
