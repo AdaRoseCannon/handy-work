@@ -579,12 +579,23 @@ AFRAME.registerComponent("handy-controls", {
     }
   },
   emitHandpose(name, handedness, details) {
-    if (name === this[handedness + '_currentPose']) return;
+    const oldPoseName = this[handedness + '_currentPose'];
+    if (name === oldPoseName) return;
     const els = this.elArrays[handedness];
     
     clearTimeout(this[handedness + '_vshortTimeout']);
     clearTimeout(this[handedness + '_shortTimeout']);
     clearTimeout(this[handedness + '_longTimeout']);
+
+    // This just fires cancel if it's no longer at the top but maybe be smarter?
+    if (oldPoseName) {
+      const oldPoseDetails = Object.assign({}, details);
+      oldPoseDetails.pose = oldPoseName;
+      for (const el of els) {
+        el.emit('pose_cancel_' + oldPoseName, oldPoseDetails, false);
+        el.emit('pose_end', oldPoseDetails, false);
+      }
+    }
     
     this[handedness + '_currentPose'] = name;
 

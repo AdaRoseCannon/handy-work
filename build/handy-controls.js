@@ -688,7 +688,7 @@
   /* global AFRAME, THREE */
   const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles";
   const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "/generic-hand";
-  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "3.1.4" );
+  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "3.1.5" );
   const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
   const POSE_FOLDER = LIB_URL + "/poses/";
   const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));
@@ -1262,12 +1262,23 @@
       }
     },
     emitHandpose(name, handedness, details) {
-      if (name === this[handedness + '_currentPose']) return;
+      const oldPoseName = this[handedness + '_currentPose'];
+      if (name === oldPoseName) return;
       const els = this.elArrays[handedness];
       
       clearTimeout(this[handedness + '_vshortTimeout']);
       clearTimeout(this[handedness + '_shortTimeout']);
       clearTimeout(this[handedness + '_longTimeout']);
+
+      // This just fires cancel if it's no longer at the top but maybe be smarter?
+      if (oldPoseName) {
+        const oldPoseDetails = Object.assign({}, details);
+        oldPoseDetails.pose = oldPoseName;
+        for (const el of els) {
+          el.emit('pose_cancel_' + oldPoseName, oldPoseDetails, false);
+          el.emit('pose_end', oldPoseDetails, false);
+        }
+      }
       
       this[handedness + '_currentPose'] = name;
 
