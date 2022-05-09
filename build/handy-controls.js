@@ -688,7 +688,7 @@
   /* global AFRAME, THREE */
   const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles";
   const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "/generic-hand";
-  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "3.1.6" );
+  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "3.1.8" );
   const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
   const POSE_FOLDER = LIB_URL + "/poses/";
   const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));
@@ -1042,12 +1042,16 @@
               const pose = frame.getJointPose(joint, referenceSpace);
               if (pose) {
                 hadAJointPose = true;
-                if (handMesh.visible === false) {
-                  for (const el of elMap.get(bone.jointName)) {
-                    el.object3D.visible = (el.getDOMAttribute('visible') !== false);
-                  }
-                }
+
+                // if there are objects make them visible and set their position
                 if (elMap.has(bone.jointName)) {
+
+                  if (handMesh.visible === false) {
+                    for (const el of elMap.get(bone.jointName)) {
+                      el.object3D.visible = (el.getDOMAttribute('visible') !== false);
+                    }
+                  }
+
                   for (const el of elMap.get(bone.jointName)) {
                     el.object3D.position.copy(pose.transform.position);
                     el.object3D.quaternion.copy(pose.transform.orientation);
