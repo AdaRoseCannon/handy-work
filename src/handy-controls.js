@@ -350,6 +350,7 @@ AFRAME.registerComponent("handy-controls", {
           (inputSource.handedness === "right" && this.bonesRight) ||
           (inputSource.handedness === "left" && this.bonesLeft);
         if (!bones.length) continue;
+        let hadAJointPose = false;
         for (const bone of bones) {
           const joint = inputSource.hand.get(bone.jointName);
           toMagnet.push(bone);
@@ -357,12 +358,12 @@ AFRAME.registerComponent("handy-controls", {
 
             const pose = frame.getJointPose(joint, referenceSpace);
             if (pose) {
-              if (handMesh.visible === false && elMap.has(bone.jointName)) {
+              hadAJointPose = true;
+              if (handMesh.visible === false) {
                 for (const el of elMap.get(bone.jointName)) {
                   el.object3D.visible = (el.getDOMAttribute('visible') !== false);
                 }
               }
-              handMesh.visible = true;
               if (elMap.has(bone.jointName)) {
                 for (const el of elMap.get(bone.jointName)) {
                   el.object3D.position.copy(pose.transform.position);
@@ -378,6 +379,9 @@ AFRAME.registerComponent("handy-controls", {
               continue inputSourceLoop;
             }
           }
+        }
+        if (hadAJointPose) {
+          handMesh.visible = true;
         }
       } else if (handMesh)  {
         handMesh.visible = false;

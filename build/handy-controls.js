@@ -688,7 +688,7 @@
   /* global AFRAME, THREE */
   const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles";
   const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "/generic-hand";
-  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "3.1.5" );
+  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "3.1.6" );
   const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
   const POSE_FOLDER = LIB_URL + "/poses/";
   const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));
@@ -1033,6 +1033,7 @@
             (inputSource.handedness === "right" && this.bonesRight) ||
             (inputSource.handedness === "left" && this.bonesLeft);
           if (!bones.length) continue;
+          let hadAJointPose = false;
           for (const bone of bones) {
             const joint = inputSource.hand.get(bone.jointName);
             toMagnet.push(bone);
@@ -1040,12 +1041,12 @@
 
               const pose = frame.getJointPose(joint, referenceSpace);
               if (pose) {
-                if (handMesh.visible === false && elMap.has(bone.jointName)) {
+                hadAJointPose = true;
+                if (handMesh.visible === false) {
                   for (const el of elMap.get(bone.jointName)) {
                     el.object3D.visible = (el.getDOMAttribute('visible') !== false);
                   }
                 }
-                handMesh.visible = true;
                 if (elMap.has(bone.jointName)) {
                   for (const el of elMap.get(bone.jointName)) {
                     el.object3D.position.copy(pose.transform.position);
@@ -1061,6 +1062,9 @@
                 continue inputSourceLoop;
               }
             }
+          }
+          if (hadAJointPose) {
+            handMesh.visible = true;
           }
         } else if (handMesh)  {
           handMesh.visible = false;
