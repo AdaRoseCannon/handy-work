@@ -125,7 +125,7 @@ export function generatePose(inputSources, referenceSpace, frame, float32Array) 
 			size +      // weighting for individual joints left hand
 			size        // weighting for individual joints right hand
 
-		if (float32Array.byteLength < bufferSize * 4) {
+		if (float32Array !== undefined && float32Array.byteLength < bufferSize * 4) {
 			throw Error(`Provided buffer too small it needs to be a float32 and the size needs to be ${bufferSize} (${bufferSize * 4} bytes)`)
 		}
 		const outData = float32Array || new Float32Array(bufferSize);
