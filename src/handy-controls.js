@@ -323,6 +323,7 @@ AFRAME.registerComponent("handy-controls", {
     const referenceSpace = renderer.xr.getReferenceSpace();
     const toUpdate = [];
     const frame = this.el.sceneEl.frame;
+    if (!frame) return;
 
     let i=0;
     let transientSourceIndex = 0;
