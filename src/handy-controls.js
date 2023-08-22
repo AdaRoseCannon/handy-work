@@ -352,12 +352,21 @@ AFRAME.registerComponent("handy-controls", {
           (inputSource.handedness === "left" && this.bonesLeft);
         if (!bones.length) continue;
         let hadAJointPose = false;
+	      
+	// Defined jointPoses and jointRadii params for the fillposes and fillJointRadii methods below.
+        // Used the joints variable defined above to calculate the number of joints.
+        let jointPoses = new Float32Array(16 * joints.length);
+	let jointRadii = new Float32Array(joints.length);
+	      
         for (const bone of bones) {
           const joint = inputSource.hand.get(bone.jointName);
           toMagnet.push(bone);
           if (joint) {
 
-            const pose = frame.getJointPose(joint, referenceSpace);
+            //const pose = frame.getJointPose(joint, referenceSpace);
+            // pose retrieved with the fillPoses and fillJointRadii methods.
+            const pose = frame.fillPoses(inputSource.hand.values(), referenceSpace, this.jointPoses) && frame.fillJointRadii(inputSource.hand.values(), this.jointRadii);
+		  
             if (pose) {
               hadAJointPose = true;
 
