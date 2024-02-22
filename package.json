@@ -10,7 +10,7 @@
     "docs1": "awk '\n BEGIN {p=1}\n /^<!--DOCS-->/ {print;system(\"npx jsdoc-to-markdown ./src/handy-work.js\");p=0}\n /^<!--DOCS_END-->/ {p=1}\n p' README.md > ~README.md && mv ~README.md README.md",
     "docs2": "awk '\n BEGIN {p=1}\n /^<!--SCHEMA-->/ {print;system(\"node ./aframe-to-md.mjs ./build/handy-controls.min.js\");p=0}\n /^<!--SCHEMA_END-->/ {p=1}\n p' README-AFRAME.md > ~README-AFRAME.md && mv ~README-AFRAME.md README-AFRAME.md",
     "docs3": "awk '\n BEGIN {p=1}\n /^<!--SCHEMA2-->/ {print;system(\"node ./aframe-to-md.mjs ./src/magnet-helpers.js\");p=0}\n /^<!--SCHEMA2_END-->/ {p=1}\n p' README-AFRAME.md > ~README-AFRAME.md && mv ~README-AFRAME.md README-AFRAME.md",
-    "docs": "npm run docs1 && npm run docs2 && npm run docs3;",
+    "docs": "npm run docs1 && npm run docs2 && npm run docs3",
     "build": "rollup -c && rollup -c ./rollup-aframe.config.js && rollup -c ./rollup-standalone.config.js && rollup -f cjs ./build/esm/handy-work.standalone.js -o ./build/cjs/handy-work.standalone.js && rollup -c -p rollup-plugin-terser && find build -maxdepth 2 -iname \"*.js\" -not -type d -exec du -h {} \\;;npm run docs",
     "develop": "rollup -w -c",
     "test": "echo \"Error: no test specified\" && exit 1"
