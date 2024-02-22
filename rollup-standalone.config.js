@@ -3,7 +3,9 @@ import { execSync } from 'child_process';
 import { terser } from "rollup-plugin-terser";
 import path from 'path';
 
-const handposeWorkerCompileCmd = path.resolve(`./node_modules/.bin/rollup -f esm -p "rollup-plugin-terser" ./build/esm/handpose.js`);
+const rollupPath = path.resolve('./node_modules/.bin/rollup');
+const handPoseEsmBuildPath = path.resolve('./build/esm/handpose.js');
+const handposeWorkerCompileCmd = `${rollupPath} -f esm -p "rollup-plugin-terser" ${handPoseEsmBuildPath}`;
 const handposeSrc = '`\n' + execSync(handposeWorkerCompileCmd) + '`';
 
 export default {
