@@ -12,7 +12,7 @@ import {
 	MotionController
 } from 'three/examples/jsm/libs/motion-controllers.module.js';
 
-const DEFAULT_PROFILES_PATH = 'https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles';
+const DEFAULT_PROFILES_PATH = 'https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles';
 const DEFAULT_PROFILE = 'generic-trigger';
 
 class XRControllerModel extends Object3D {
@@ -205,11 +205,20 @@ function addAssetSceneToControllerModel( controllerModel, scene ) {
 
 class XRControllerModelFactory {
 
-	constructor( gltfLoader, path ) {
+	constructor( gltfLoader, onLoad = null ) {
 
 		this.gltfLoader = gltfLoader;
-		this.path = path || DEFAULT_PROFILES_PATH;
+		this.path = DEFAULT_PROFILES_PATH;
 		this._assetCache = {};
+		this.onLoad = onLoad;
+
+	}
+
+	setPath( path ) {
+
+		this.path = path;
+
+		return this;
 
 	}
 
@@ -222,7 +231,7 @@ class XRControllerModelFactory {
 
 			const xrInputSource = event.data;
 
-			if ( xrInputSource.targetRayMode !== 'tracked-pointer' || ! xrInputSource.gamepad ) return;
+			if ( xrInputSource.targetRayMode !== 'tracked-pointer' || ! xrInputSource.gamepad || xrInputSource.hand ) return;
 
 			fetchProfile( xrInputSource, this.path, DEFAULT_PROFILE ).then( ( { profile, assetPath } ) => {
 
@@ -257,6 +266,8 @@ class XRControllerModelFactory {
 
 					addAssetSceneToControllerModel( controllerModel, scene );
 
+					if ( this.onLoad ) this.onLoad( scene );
+
 				} else {
 
 					if ( ! this.gltfLoader ) {
@@ -273,6 +284,8 @@ class XRControllerModelFactory {
 						scene = asset.scene.clone();
 
 						addAssetSceneToControllerModel( controllerModel, scene );
+
+						if ( this.onLoad ) this.onLoad( scene );
 
 					},
 					null,
