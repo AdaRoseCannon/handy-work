@@ -1,7 +1,7 @@
 /* global AFRAME, THREE */
 import { XRControllerModelFactory } from './lib/XRControllerModelFactory.js';
 const __version__ = __version__;
-const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets/dist/profiles";
+const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles";
 const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "/generic-hand";
 const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + (__version__ ? '@' + __version__ : '');
 const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
@@ -94,7 +94,8 @@ AFRAME.registerComponent("handy-controls", {
     const self = this;
     const dracoLoader = this.el.sceneEl.systems['gltf-model'].getDRACOLoader();
     const meshoptDecoder = this.el.sceneEl.systems['gltf-model'].getMeshoptDecoder();
-    this.controllerModelFactory = new XRControllerModelFactory(this.loader, DEFAULT_PROFILES_PATH);
+    this.controllerModelFactory = new XRControllerModelFactory(this.loader);
+    this.controllerModelFactory.setPath(DEFAULT_PROFILES_PATH);
     this.model = null;
     if (dracoLoader) {
       this.loader.setDRACOLoader(dracoLoader);
