@@ -345,17 +345,14 @@ AFRAME.registerComponent("handy-controls", {
     const frame = this.el.sceneEl.frame;
     if (!frame) return;
 
-    let i=0;
     let transientSourceIndex = 0;
     inputSourceLoop:
     for (const inputSource of session.inputSources) {
-      const inputSourceIndex = i++;
       const magnetEl = this.magnetEls.get(inputSource.handedness);
       let magnetTarget = null;
       let fadeT = 1;
       let bones = [];
       const toMagnet = [];
-      let controllerModel;
       let handMesh;
       
       const allEls = this.elArrays[inputSource.handedness];
