@@ -110,9 +110,9 @@ AFRAME.registerComponent("handy-controls", {
     
     import(LIB)
     .then(function ({
-			update,
-			loadPose,
-			dumpHands,
+      update,
+      loadPose,
+      dumpHands,
       setPose,
       getPose
     }) {
