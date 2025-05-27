@@ -519,9 +519,7 @@ AFRAME.registerComponent("handy-controls", {
       }
       
       if (magnetEl) {
-        magnetEl.object3D.updateWorldMatrix(true, false);
         this.el.object3D.getWorldQuaternion(tempQuaternion_C).invert();
-
         magnetEl.object3D.getWorldPosition(tempVector3_A);
         for (const el of this.getMagnetTargets(magnetEl)) {
           let magnetRange,fadeEnd,angleRange,angleEnd;
