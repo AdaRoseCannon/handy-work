@@ -524,7 +524,15 @@ AFRAME.registerComponent("handy-controls", {
         for (const el of this.getMagnetTargets(magnetEl)) {
           let magnetRange,fadeEnd,angleRange,angleEnd;
           const magnetRangeData = el.dataset.magnetRange;
-          if (magnetRangeData) [magnetRange,fadeEnd,angleRange,angleEnd] = magnetRangeData.split(',').map(n => Number(n));
+          if (magnetRangeData) {
+            if (el.object3D.userData.magnetRangeData) {
+              [magnetRange,fadeEnd,angleRange,angleEnd] = el.object3D.userData.magnetRangeData;
+            } else {
+              // Cache it
+              el.object3D.userData.magnetRangeData = magnetRangeData.split(',').map(n => Number(n));
+              [magnetRange,fadeEnd,angleRange,angleEnd] = el.object3D.userData.magnetRangeData;
+            }
+          }
           magnetRange = magnetRange || 0.2;
           fadeEnd = fadeEnd === undefined ? 0.1 : fadeEnd;
           angleRange = angleRange || 120;
