@@ -5,8 +5,8 @@ import path from 'path';
 
 const rollupPath = path.resolve('./node_modules/.bin/rollup');
 const handPoseEsmBuildPath = path.resolve('./build/esm/handpose.js');
-const handposeWorkerCompileCmd = `${rollupPath} -f esm -p "rollup-plugin-terser" ${handPoseEsmBuildPath}`;
-const handposeSrc = '`\n' + execSync(handposeWorkerCompileCmd) + '`';
+const handposeWorkerCompileCmd = [rollupPath, '-f', 'esm', '-p', 'rollup-plugin-terser', handPoseEsmBuildPath];
+const handposeSrc = '`\n' + execSync(handposeWorkerCompileCmd.join(' ')) + '`';
 
 export default {
 	input: "build/esm/handy-work.js",
