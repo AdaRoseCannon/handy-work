@@ -701,7 +701,7 @@
   /* global AFRAME, THREE */
   const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles";
   const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "/generic-hand";
-  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "3.1.11" );
+  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "3.1.12" );
   const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
   const POSE_FOLDER = LIB_URL + "/poses/";
   const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));
@@ -808,9 +808,9 @@
       
       import(LIB)
       .then(function ({
-  			update,
-  			loadPose,
-  			dumpHands,
+        update,
+        loadPose,
+        dumpHands,
         setPose,
         getPose
       }) {
@@ -1040,6 +1040,7 @@
       const toUpdate = [];
       const frame = this.el.sceneEl.frame;
       if (!frame) return;
+
       let transientSourceIndex = 0;
       inputSourceLoop:
       for (const inputSource of session.inputSources) {
@@ -1214,14 +1215,20 @@
         }
         
         if (magnetEl) {
-          magnetEl.object3D.updateWorldMatrix(true, false);
           this.el.object3D.getWorldQuaternion(tempQuaternion_C).invert();
-
           magnetEl.object3D.getWorldPosition(tempVector3_A);
           for (const el of this.getMagnetTargets(magnetEl)) {
             let magnetRange,fadeEnd,angleRange,angleEnd;
             const magnetRangeData = el.dataset.magnetRange;
-            if (magnetRangeData) [magnetRange,fadeEnd,angleRange,angleEnd] = magnetRangeData.split(',').map(n => Number(n));
+            if (magnetRangeData) {
+              if (el.object3D.userData.magnetRangeData) {
+                [magnetRange,fadeEnd,angleRange,angleEnd] = el.object3D.userData.magnetRangeData;
+              } else {
+                // Cache it
+                el.object3D.userData.magnetRangeData = magnetRangeData.split(',').map(n => Number(n));
+                [magnetRange,fadeEnd,angleRange,angleEnd] = el.object3D.userData.magnetRangeData;
+              }
+            }
             magnetRange = magnetRange || 0.2;
             fadeEnd = fadeEnd === undefined ? 0.1 : fadeEnd;
             angleRange = angleRange || 120;
