@@ -226,12 +226,17 @@ class XRControllerModelFactory {
 
 		const controllerModel = new XRControllerModel();
 		let scene = null;
+		let loading = false;
 
 		controller.addEventListener( 'connected', ( event ) => {
 
 			const xrInputSource = event.data;
 
 			if ( xrInputSource.targetRayMode !== 'tracked-pointer' || ! xrInputSource.gamepad || xrInputSource.hand ) return;
+
+			// Guard against duplicate loading from multiple 'connected' events
+			if ( loading ) return;
+			loading = true;
 
 			fetchProfile( xrInputSource, this.path, DEFAULT_PROFILE ).then( ( { profile, assetPath } ) => {
 
@@ -310,6 +315,7 @@ class XRControllerModelFactory {
 			controllerModel.motionController = null;
 			controllerModel.remove( scene );
 			scene = null;
+			loading = false;
 
 		} );
 
