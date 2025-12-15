@@ -607,12 +607,17 @@
 
   		const controllerModel = new XRControllerModel();
   		let scene = null;
+  		let loading = false;
 
   		controller.addEventListener( 'connected', ( event ) => {
 
   			const xrInputSource = event.data;
 
   			if ( xrInputSource.targetRayMode !== 'tracked-pointer' || ! xrInputSource.gamepad || xrInputSource.hand ) return;
+
+  			// Guard against duplicate loading from multiple 'connected' events
+  			if ( loading ) return;
+  			loading = true;
 
   			fetchProfile( xrInputSource, this.path, DEFAULT_PROFILE ).then( ( { profile, assetPath } ) => {
 
@@ -689,6 +694,7 @@
   			controllerModel.motionController = null;
   			controllerModel.remove( scene );
   			scene = null;
+  			loading = false;
 
   		} );
 
@@ -701,7 +707,7 @@
   /* global AFRAME, THREE */
   const DEFAULT_PROFILES_PATH = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles";
   const DEFAULT_HAND_PROFILE_PATH = DEFAULT_PROFILES_PATH + "/generic-hand";
-  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "3.1.12" );
+  const LIB_URL = "https://cdn.jsdelivr.net/npm/handy-work" + ('@' + "3.1.13" );
   const LIB = LIB_URL + "/build/esm/handy-work.standalone.js";
   const POSE_FOLDER = LIB_URL + "/poses/";
   const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));
@@ -996,36 +1002,68 @@
       return eventHandler.bind(bindTarget);
     },
 
-    createControllerModel(index, inputSource) {
-      const renderer = this.el.sceneEl.renderer;
-      const controllerGrip = renderer.xr.getControllerGrip(index);
-      const model = this.controllerModelFactory.createControllerModel(controllerGrip);
+    initControllerModels() {
+      if (this.controllerModelsInitialized) return;
+      this.controllerModelsInitialized = true;
 
-      // The controllerGrip may switch to a different inputSource if the
-      // controllers disconnected and reconnected, so we need to track which
-      // handedness the controllerGrip is currently controlling.
-      controllerGrip.addEventListener('connected', (event) => {
-        const xrInputSource = event.data;
-        model.userData.handedness = xrInputSource.handedness;
-      });
-      controllerGrip.addEventListener('disconnected', () => {
-        model.userData.handedness = 'unknown';
-      });
-      // This tells the controllerModel that a new inputSource was just added and a model should be generated
-      controllerGrip.dispatchEvent({ type: 'connected', data: inputSource });
-      this.el.setObject3D('controller-model-' + index, model);
-      return model;
+      const renderer = this.el.sceneEl.renderer;
+      for (let i = 0; i < 2; i++) {
+        const controllerGrip = renderer.xr.getControllerGrip(i);
+        const model = this.controllerModelFactory.createControllerModel(controllerGrip);
+        model.userData.controllerGrip = controllerGrip;
+        model.visible = false;
+
+        // Track which handedness the controllerGrip is currently controlling.
+        // This is set by WebXRManager's 'connected' events.
+        controllerGrip.addEventListener('connected', (event) => {
+          const xrInputSource = event.data;
+          model.userData.handedness = xrInputSource.handedness;
+        });
+        controllerGrip.addEventListener('disconnected', () => {
+          model.userData.handedness = 'unknown';
+          model.visible = false;
+        });
+
+        this.el.setObject3D('controller-model-' + i, model);
+      }
     },
 
     getControllerModel(inputSource) {
-      const model0 = this.el.getObject3D('controller-model-0') || this.createControllerModel(0, inputSource);
+      this.initControllerModels();
+
+      const model0 = this.el.getObject3D('controller-model-0');
+      const model1 = this.el.getObject3D('controller-model-1');
+
+      // Find model with matching handedness
+      let model = null;
       if (model0.userData.handedness === inputSource.handedness) {
-        return model0;
+        model = model0;
+      } else if (model1.userData.handedness === inputSource.handedness) {
+        model = model1;
       }
 
-      const model1 = this.el.getObject3D('controller-model-1') || this.createControllerModel(1, inputSource);
-      if (model1.userData.handedness === inputSource.handedness) {
-        return model1;
+      // If no model matches, 'connected' events may not have fired yet.
+      // Find an available model (handedness unknown or undefined) and use it.
+      if (!model) {
+        if (!model0.userData.handedness || model0.userData.handedness === 'unknown') {
+          model = model0;
+          model.userData.handedness = inputSource.handedness;
+        } else if (!model1.userData.handedness || model1.userData.handedness === 'unknown') {
+          model = model1;
+          model.userData.handedness = inputSource.handedness;
+        }
+      }
+
+      if (model) {
+        // If no motionController yet, dispatch 'connected' to trigger model loading.
+        // This handles the case where WebXRManager's 'connected' fired while hand
+        // tracking was active (factory ignores events with .hand).
+        // The factory guards against duplicate loads internally.
+        if (!model.motionController && model.userData.controllerGrip) {
+          model.userData.controllerGrip.dispatchEvent({ type: 'connected', data: inputSource });
+        }
+        model.visible = true;
+        return model;
       }
 
       return null;
@@ -1057,7 +1095,17 @@
         handMesh = this.el.getObject3D("hand-mesh-" + inputSource.handedness);
         if (inputSource.hand) {
           toUpdate.push(inputSource);
-    
+
+          // Hide controller model when hand tracking is active
+          const model0 = this.el.getObject3D('controller-model-0');
+          const model1 = this.el.getObject3D('controller-model-1');
+          if (model0 && model0.userData.handedness === inputSource.handedness) {
+            model0.visible = false;
+          }
+          if (model1 && model1.userData.handedness === inputSource.handedness) {
+            model1.visible = false;
+          }
+
           bones =
             (inputSource.handedness === "right" && this.bonesRight) ||
             (inputSource.handedness === "left" && this.bonesLeft);
@@ -1351,6 +1399,7 @@
       }
       if (this.el.getObject3D('controller-model-0')) this.el.removeObject3D('controller-model-0');
       if (this.el.getObject3D('controller-model-1')) this.el.removeObject3D('controller-model-1');
+      this.controllerModelsInitialized = false;
     },
   });
 
